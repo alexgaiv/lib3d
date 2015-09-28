@@ -60,7 +60,7 @@ ATOM D3DWindow::_RegisterWindow(D3DWindow *pThis)
 	wc.hbrBackground = wi.hbrBackground;
 	wc.lpszMenuName = wi.lpszMenuName;
 	wc.lpszClassName = wi.lpszClassName;
-	wc.hIconSm = wc.hIconSm;
+	wc.hIconSm = wi.hIconSm;
 	
 	return RegisterClassEx(&wc);
 }
