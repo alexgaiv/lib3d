@@ -28,8 +28,14 @@ public:
 	void SetOrtho(float left, float right, float bottom, float top,
 		float zNear, float zFar, int winWidth, int winHeight);
 
-	void SetRotationSpeed(float factor) { view.s = 1.0f / factor; }
+	void SetRotationSpeed(float factor)
+		{ isConstSpeed = false; view.s = 1.0f / factor; }
+	void SetConstRotationSpeed(float rotSpeed)
+		{ isConstSpeed = true; constSpeedValue = rotSpeed; }
 private:
+	bool isConstSpeed;
+	float constSpeedValue;
+
 	struct { float fw, fh, w, h, s; } view;
 	IDirect3DDevice9 *dev;
 	float scale;

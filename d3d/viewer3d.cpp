@@ -1,7 +1,7 @@
 #include "viewer3d.h"
 
 Viewer3D::Viewer3D(IDirect3DDevice9 *device)
-	: dev(device)
+	: dev(device), isConstSpeed(false), constSpeedValue(0.0f)
 {
 	view.fw = view.fw = view.s = 1.0f;
 	view.w = view.h = 0.0f;
@@ -55,7 +55,8 @@ void Viewer3D::Rotate(int winX, int winY)
 	if (length < 1e-5) return;
 	delta /= length;
 
-	float rotDist = 0.5f * max(view.w, view.h) * view.s;
+	float rotDist = isConstSpeed ? constSpeedValue : 
+		0.5f * max(view.w, view.h) * view.s;
 	float angle = length / rotDist * 180.0f;
 	Vector3f axis = Vector3f(delta.y, delta.x, 0.0f);
 
