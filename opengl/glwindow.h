@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-struct WindowInfoStruct
+struct GLWindowInfoStruct
 {
 	HCURSOR hCursor;
 	HICON hIcon;
@@ -41,7 +41,8 @@ public:
 		int width = CW_USEDEFAULT,
 		int height = CW_USEDEFAULT,
 		DWORD dwStyle = WS_OVERLAPPEDWINDOW,
-		DWORD dwExStyle = 0);
+		DWORD dwExStyle = 0,
+		HWND hParent = NULL);
 
 	void CreateFullScreen(LPCTSTR lpCaption);
 
@@ -54,7 +55,7 @@ public:
 	
 	void MainLoop();
 protected:
-	virtual WindowInfoStruct GetWindowInfo();
+	virtual GLWindowInfoStruct GetWindowInfo();
 	virtual PIXELFORMATDESCRIPTOR GetDCPixelFormat();
 
 	virtual void OnCreate() { }
