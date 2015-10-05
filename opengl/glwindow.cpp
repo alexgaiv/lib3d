@@ -1,13 +1,14 @@
 #include "glwindow.h"
 #include <strsafe.h>
 
-HWND GLWindow::CreateParam(LPCTSTR lpCaption, int x, int y, int width, int height, DWORD dwStyle, DWORD dwExStyle)
+HWND GLWindow::CreateParam(LPCTSTR lpCaption, int x, int y, int width, int height,
+	DWORD dwStyle, DWORD dwExStyle, HWND hParent)
 {
 	static ATOM reg = GLWindow::_RegisterWindow(this);
 
 	m_hwnd = ::CreateWindowEx(dwExStyle, MAKEINTATOM(reg), lpCaption,
 		dwStyle|WS_CLIPCHILDREN|WS_CLIPSIBLINGS,
-		x, y, width, height, NULL, NULL, GetModuleHandle(NULL), this);
+		x, y, width, height, hParent, NULL, GetModuleHandle(NULL), this);
 
 	return m_hwnd;
 }
@@ -32,12 +33,12 @@ void GLWindow::MainLoop()
 	}
 }
 
-WindowInfoStruct GLWindow::GetWindowInfo()
+GLWindowInfoStruct GLWindow::GetWindowInfo()
 {
 	TCHAR className[20] = TEXT("clsname:");
 	StringCchPrintf(className+8, 10, TEXT("%d"), (int)this);
 
-	WindowInfoStruct wi = { };
+	GLWindowInfoStruct wi = { };
 	wi.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wi.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wi.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
@@ -53,9 +54,9 @@ PIXELFORMATDESCRIPTOR GLWindow::GetDCPixelFormat()
 	PIXELFORMATDESCRIPTOR pfd = { };
 	pfd.nSize = sizeof(pfd);
 	pfd.nVersion = 1;
-	pfd.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL;
+	pfd.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
 	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 24;
+	pfd.cColorBits = 32;
 	pfd.cDepthBits = 32;
 	return pfd;
 }
@@ -63,7 +64,7 @@ PIXELFORMATDESCRIPTOR GLWindow::GetDCPixelFormat()
 ATOM GLWindow::_RegisterWindow(GLWindow *pThis)
 {
 	WNDCLASSEX wc = { };
-	WindowInfoStruct wi = pThis->GetWindowInfo();
+	GLWindowInfoStruct wi = pThis->GetWindowInfo();
 
 	wc.cbSize = sizeof(wc);
 	wc.style = CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS|CS_OWNDC;
