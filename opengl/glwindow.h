@@ -33,6 +33,7 @@ public:
 	HGLRC m_hrc;
 
 	GLWindow() : m_hwnd(NULL), m_hdc(NULL), m_hrc(NULL), bFullScreen(false) { }
+	virtual ~GLWindow();
 
 	HWND CreateParam(
 		LPCTSTR lpCaption,

@@ -1,6 +1,14 @@
 #include "glwindow.h"
 #include <strsafe.h>
 
+GLWindow::~GLWindow()
+{
+	if (IsWindow(m_hwnd)) {
+		SetWindowLongPtr(m_hwnd, GWLP_USERDATA, 0);
+		DestroyWindow(m_hwnd);
+	}
+}
+
 HWND GLWindow::CreateParam(LPCTSTR lpCaption, int x, int y, int width, int height,
 	DWORD dwStyle, DWORD dwExStyle, HWND hParent)
 {
@@ -59,6 +67,32 @@ PIXELFORMATDESCRIPTOR GLWindow::GetDCPixelFormat()
 	pfd.cColorBits = 32;
 	pfd.cDepthBits = 32;
 	return pfd;
+}
+
+void GLWindow::_InitRC()
+{
+	m_hdc = GetDC(m_hwnd);
+
+	PIXELFORMATDESCRIPTOR pfd = this->GetDCPixelFormat();
+	int iPixelFormat = ChoosePixelFormat(m_hdc, &pfd);
+	SetPixelFormat(m_hdc, iPixelFormat, &pfd);
+
+	m_hrc = wglCreateContext(m_hdc);
+	wglMakeCurrent(m_hdc, m_hrc);
+}
+
+void GLWindow::_ChangeDisplaySettings()
+{
+	RECT screenRect = { };
+	GetClientRect(GetDesktopWindow(), &screenRect);
+
+	DEVMODE deviceMode = { };
+	deviceMode.dmSize = sizeof(DEVMODE);
+	deviceMode.dmPelsWidth = screenRect.right;
+	deviceMode.dmPelsHeight = screenRect.bottom;
+	deviceMode.dmBitsPerPel = 24;
+	deviceMode.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT|DM_BITSPERPEL;
+	ChangeDisplaySettings(&deviceMode, CDS_FULLSCREEN);
 }
 
 ATOM GLWindow::_RegisterWindow(GLWindow *pThis)
@@ -197,30 +231,4 @@ HRESULT GLWindow::_HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
-}
-
-void GLWindow::_InitRC()
-{
-	m_hdc = GetDC(m_hwnd);
-
-	PIXELFORMATDESCRIPTOR pfd = this->GetDCPixelFormat();
-	int iPixelFormat = ChoosePixelFormat(m_hdc, &pfd);
-	SetPixelFormat(m_hdc, iPixelFormat, &pfd);
-
-	m_hrc = wglCreateContext(m_hdc);
-	wglMakeCurrent(m_hdc, m_hrc);
-}
-
-void GLWindow::_ChangeDisplaySettings()
-{
-	RECT screenRect = { };
-	GetClientRect(GetDesktopWindow(), &screenRect);
-
-	DEVMODE deviceMode = { };
-	deviceMode.dmSize = sizeof(DEVMODE);
-	deviceMode.dmPelsWidth = screenRect.right;
-	deviceMode.dmPelsHeight = screenRect.bottom;
-	deviceMode.dmBitsPerPel = 24;
-	deviceMode.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT|DM_BITSPERPEL;
-	ChangeDisplaySettings(&deviceMode, CDS_FULLSCREEN);
 }
