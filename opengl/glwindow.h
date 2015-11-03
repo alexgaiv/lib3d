@@ -32,7 +32,7 @@ public:
 	HDC   m_hdc;
 	HGLRC m_hrc;
 
-	GLWindow() : m_hwnd(NULL), m_hdc(NULL), m_hrc(NULL), bFullScreen(false) { }
+	GLWindow();
 	virtual ~GLWindow();
 
 	HWND CreateParam(
@@ -75,12 +75,14 @@ protected:
 	virtual void OnMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) { }
 private:
 	bool bFullScreen;
+	bool bDummy;
 	
 	static ATOM _RegisterWindow(GLWindow *pThis);
 	static LRESULT CALLBACK _WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	HRESULT _HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void _InitRC();
+	bool _CreateCompabilityContext();
 	void _ChangeDisplaySettings();
 };
 

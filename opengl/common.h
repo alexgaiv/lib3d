@@ -4,13 +4,16 @@
 #define _USE_MATH_DEFINES
 
 #include <Windows.h>
-#include <gl\GL.h>
-#include <gl\glext.h>
-#include <gl\GLU.h>
+#include <gl/glew.h>
+#include <gl/gl.h>
+#include <gl/glu.h>
+#include <gl/glext.h>
+#include <gl/wglext.h>
 #include <math.h>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
+#pragma comment(lib, "glew32.lib")
 
 #define M_PIf 3.141592653589f
 #define DEG_TO_RAD(a) ((a) * M_PIf / 180.0f)
