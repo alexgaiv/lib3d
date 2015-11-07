@@ -18,9 +18,9 @@ public:
 	void BeginRotate(int winX, int winY);
 	void Pan(int winX, int winY);
 	void Rotate(int winX, int winY);
-	void ZoomIn(float scale);
-	void ZoomOut(float scale);
+	void Zoom(float scale);
 	void SetScale(float scale);
+	float GetScale() const { return scale; };
 
 	void SetPerspective(float fovy, float zNear, float zFar,
 		Point3f center, int winWidth, int winHeight);

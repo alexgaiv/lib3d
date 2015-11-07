@@ -137,13 +137,13 @@ void Viewer3D::calcMatr()
 {
 	Matrix44f projection;
 	dev->GetTransform(D3DTS_PROJECTION, (D3DMATRIX *)projection.data);
+
 	qRotation.ToMatrix(rot);
+	rot.xAxis *= scale;
+	rot.yAxis *= scale;
+	rot.zAxis *= scale;
 
 	matr = rot * projection;
-	matr.xAxis *= scale;
-	matr.yAxis *= scale;
-	matr.zAxis *= scale;
-
 	matr.GetInverse(matr_inv);
 	changed = false;
 }
