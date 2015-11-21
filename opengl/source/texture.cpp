@@ -21,15 +21,39 @@ struct TGAHEADER
 
 BaseTexture::BaseTexture(GLenum target, GLuint id)
 {
-	this->target = target;
 	width = height = 0;
 	internalFormat = format = 0;
+	this->target = target;
 
 	if (id == GLuint(-1))
 		glGenTextures(1, &this->id);
 	else {
 		this->id = id;
 	}
+
+	switch (target)
+	{
+	case GL_TEXTURE_1D:
+		unitTarget = GL_TEXTURE_BINDING_1D; break;
+	case GL_TEXTURE_2D:
+		unitTarget = GL_TEXTURE_BINDING_2D; break;
+	case GL_TEXTURE_3D:
+		unitTarget = GL_TEXTURE_BINDING_3D; break;
+	case GL_TEXTURE_CUBE_MAP:
+		unitTarget = GL_TEXTURE_BINDING_CUBE_MAP; break;
+	}
+}
+
+void BaseTexture::Bind(GLenum textureUnit) 
+{
+	bool f = textureUnit != GLenum(-1);
+	int prevUnit = 0;
+	if (f) {
+		glGetIntegerv(unitTarget, &prevUnit);
+		glActiveTexture(textureUnit);
+	}
+	glBindTexture(target, id);
+	if (f) glActiveTexture(GL_TEXTURE0 + prevUnit);
 }
 
 void BaseTexture::SetFilters(GLint minFilter, GLint magFilter)
@@ -104,7 +128,7 @@ bool BaseTexture::_loadFromTGA(const char *filename, BYTE *&data)
 		height = tgaHeader.height;
 
 		int rowSize = imageSize / height;
-		if ((tgaHeader.descriptor & 0x10) == 0) {
+		if (~tgaHeader.descriptor & 0x10) {
 			BYTE *tmp = new BYTE[rowSize];
 			for (int i = 0; i < height / 2; i++)
 			{
@@ -117,7 +141,7 @@ bool BaseTexture::_loadFromTGA(const char *filename, BYTE *&data)
 			delete [] tmp;
 		}
 
-		if ((tgaHeader.descriptor & 8) == 1) {
+		if (tgaHeader.descriptor & 8) {
 			RGBTRIPLE tmp;
 			for (int i = 0; i < height; i++) {
 				for (int j = 0; j < width / 2; j++) {
@@ -179,6 +203,13 @@ void Texture2D::BuildMipmaps() {
 	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height,
 		internalFormat, GL_UNSIGNED_BYTE, imageData);
 	delete [] imageData;
+}
+
+void Texture2D::SetTexImage(GLenum level, GLint internalFormat, GLsizei width, GLsizei height,
+	GLint border, GLenum format, GLenum type, const GLvoid *data)
+{
+	Bind();
+	glTexImage2D(target, level, internalFormat, width, height, border, format, type, data);
 }
 
 CubeTexture::CubeTexture()

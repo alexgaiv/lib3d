@@ -47,7 +47,9 @@ public:
 
 	void CreateFullScreen(LPCTSTR lpCaption);
 
-	void Show(int nCmdShow) { ShowWindow(m_hwnd, nCmdShow); }
+	void Show(int nCmdShow) {
+		ShowWindow(m_hwnd, (bFullScreen && nCmdShow == SW_MAXIMIZE) ? SW_SHOW : nCmdShow);
+	}
 
 	void RedrawWindow() {
 		OnDisplay();

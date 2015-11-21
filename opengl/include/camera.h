@@ -15,6 +15,7 @@ public:
 	Camera(CameraType type = CAM_LAND);
 
 	Matrix44f GetViewMatrix();
+	void ApplyTransform();
 
 	Vector3f GetPosition() { return t; }
 	void SetPosition(float x, float y, float z)

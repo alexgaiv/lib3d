@@ -8,14 +8,20 @@
 class Skybox
 {
 public:
-	Skybox(const char **sides, const char *vertShader, const char *fragShader);
+	Skybox(const char **sides);
+	Skybox(const CubeTexture &tex);
 	~Skybox();
+
+	CubeTexture GetTexture() { return tex; }
 	void Draw();
 private:
 	static float vertsData[];
+	static char *source[2];
 	VertexBuffer vertices;
 	ProgramObject prog;
 	CubeTexture tex;
+
+	void _init();
 };
 
 #endif // _SKYBOX_H_

@@ -137,6 +137,9 @@ union Matrix33
 	Matrix33() {
 		data[0] = data[4] = data[8] = T(1);
 	}
+	Matrix33(T diag) {
+		data[0] = data[4] = data[8] = diag;
+	}
 	Matrix33(const T m[9]);
 	explicit Matrix33(const Matrix44<T> &m);
 	template<class T2> explicit Matrix33(const Matrix33<T2> &m);
@@ -174,6 +177,10 @@ union Matrix44
 	Matrix44() {
 		wx = wy = wz = T(0);
 		data[0] = data[5] = data[10] = data[15] = T(1);
+	}
+	Matrix44(T diag) {
+		wx = wy = wz = T(0);
+		data[0] = data[5] = data[10] = data[15] = diag;
 	}
 	Matrix44(const T m[16]);
 	explicit Matrix44(const Matrix33<T> &m);

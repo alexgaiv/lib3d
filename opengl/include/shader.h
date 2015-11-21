@@ -2,6 +2,7 @@
 #define _SHADER_H_
 
 #include "common.h"
+#include "datatypes.h"
 #include <fstream>
 #include <vector>
 #include <string>
@@ -16,9 +17,11 @@ public:
 	GLuint Handle() const { return handle; }
 	bool IsCompiled() const { return compiled; }
 	bool CompileFile(const char *filename);
+	bool CompileSource(const char *source);
 private:
 	GLuint handle;
 	bool compiled;
+	bool _log();
 };
 
 class ProgramObject
@@ -30,9 +33,8 @@ public:
 	~ProgramObject();
 	ProgramObject &operator=(const ProgramObject &p);
 
-	bool IsBad() const { return bad; }
 	GLuint Handle() const { return handle; }
-	bool isLinked() const { return linked; }
+	bool IsLinked() const { return linked; }
 	void AttachShader(const Shader &shader);
 	void DetachShader(const Shader &shader);
 	bool Link();
@@ -41,9 +43,13 @@ public:
 	void BindAttribLocation(GLuint index, const char *name);
 	GLuint GetUniformLocation(const char *name);
 
-	void ModelView(const float *v);
-	void Projection(const float *v);
-	void NormalMatrix(const float *v);
+	bool HasMVP() const { return uniforms.mvpLoc != -1; }
+	bool HasNormalMatrix() const { return uniforms.normLoc != -1; }
+
+	void ModelView(const Matrix44f &m);
+	void Projection(const Matrix44f &m);
+	void ModelViewProjection(const Matrix44f &m);
+	void NormalMatrix(const Matrix44f &m);
 
 	void Uniform(const char *name, float v0);
 	void Uniform(const char *name, float v0, float v1);
@@ -61,7 +67,7 @@ private:
 		int count;
 		char **names;
 		GLenum *types;
-		int mvLoc, projLoc, normLoc;
+		int mvLoc, projLoc, mvpLoc, normLoc;
 
 		void free() {
 			if (!count) return;
@@ -75,7 +81,6 @@ private:
 
 	GLuint handle;
 	bool linked;
-	bool bad;
 
 	void clone(const ProgramObject &p);
 	int lookup(const char *name) {

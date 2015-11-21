@@ -29,8 +29,8 @@ Matrix44f Frustum(float left, float right, float bottom,
 	float top, float zNear, float zFar)
 {
 	Matrix44f ret;
-	ret.m[0][0] = 2*zNear / (right - left);
-	ret.m[1][1] = 2*zNear / (top - bottom);
+	ret.m[0][0] = 2.0f*zNear / (right - left);
+	ret.m[1][1] = 2.0f*zNear / (top - bottom);
 	ret.m[2][0] = (right + left) / (right - left);
 	ret.m[2][1] = (top + bottom) / (top - bottom);
 	ret.m[2][2] = -(zFar + zNear) / (zFar - zNear);
@@ -48,14 +48,18 @@ Matrix44f Ortho(float left, float right, float bottom,
 	float dy = 1.0f / (top - bottom);
 	float dz = 1.0f / (zFar - zNear);
 
-	ret.m[0][0] = 2*dx;
-	ret.m[1][1] = 2*dy;
-	ret.m[2][2] = -2*dz;
-	ret.m[3][0] = (right + left) * dx;
-	ret.m[3][1] = (top + bottom) * dy;
-	ret.m[3][2] = (zFar + zNear) * dz;
+	ret.m[0][0] = 2.0f*dx;
+	ret.m[1][1] = 2.0f*dy;
+	ret.m[2][2] = -2.0f*dz;
+	ret.m[3][0] = -(right + left) * dx;
+	ret.m[3][1] = -(top + bottom) * dy;
+	ret.m[3][2] = -(zFar + zNear) * dz;
 	return ret;
+}
 
+Matrix44f Ortho2D(float left, float right, float bottom, float top)
+{
+	return Ortho(left, right, bottom, top, -1.0f, 1.0f);
 }
 
 Matrix44f Perspective(float fovY, float aspect, float zNear, float zFar)
@@ -63,4 +67,23 @@ Matrix44f Perspective(float fovY, float aspect, float zNear, float zFar)
 	float fh = tan(fovY * (float)M_PI / 360.0f) * zNear;
 	float fw = fh * aspect;
 	return Frustum(-fw, fw, -fh, fh, zNear, zFar);
+}
+
+Matrix44f LookAt(Vector3f eye, Vector3f center, Vector3f up)
+{
+	Matrix44f ret;
+	Vector3f z = eye - center;
+	Vector3f x = Vector3f::Cross(up, z);
+	Vector3f y = Vector3f::Cross(z, x);
+
+	x.Normalize();
+	y.Normalize();
+	z.Normalize();
+
+	ret.xAxis = Vector3f(x.x, y.x, z.x);
+	ret.yAxis = Vector3f(x.y, y.y, z.y);
+	ret.zAxis = Vector3f(x.z, y.z, z.z);
+
+	ret.translate = Matrix33f(ret) * eye;
+	return ret;
 }

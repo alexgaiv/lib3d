@@ -3,6 +3,7 @@
 
 #include "datatypes.h"
 #include "shader.h"
+#include "mesh.h"
 #include <list>
 #include <stack>
 
@@ -38,6 +39,10 @@ public:
 	static void PushProjection() { projStack.push(projection); }
 	static void PopProjection()  { SetProjection(projStack.top()); projStack.pop(); }
 private:
+	friend class ProgramObject;
+	friend class Mesh;
+
+	static GLuint curProgram;
 	static std::list<ProgramObject *> shaders;
 	static Matrix44f modelview, projection;
 	static stack<Matrix44f> mvStack, projStack;

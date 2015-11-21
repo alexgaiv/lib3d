@@ -11,8 +11,9 @@ public:
 	Quaternion qRotation;
 	Viewer3D();
 
-	Matrix44f Modelview();
+	Matrix44f GetViewMatrix();
 	void ApplyTransform();
+
 	void ResetView();
 	void BeginPan(int winX, int winY);
 	void BeginRotate(int winX, int winY);

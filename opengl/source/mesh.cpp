@@ -1,6 +1,6 @@
 #include "mesh.h"
 
-Mesh::Mesh() : texture(GL_TEXTURE_2D, GLuint(-1)), programId(0)
+Mesh::Mesh() : texture(GL_TEXTURE_2D, GLuint(-2)), textureUnit(GLenum(-1)), programId(0)
 {
 	verticesCount = indicesCount = 0;
 	vertices.Bind(GL_ARRAY_BUFFER);
@@ -9,8 +9,9 @@ Mesh::Mesh() : texture(GL_TEXTURE_2D, GLuint(-1)), programId(0)
 	texCoords.Bind(GL_ARRAY_BUFFER);
 }
 
-void Mesh::BindTexture(const BaseTexture &texture) {
+void Mesh::BindTexture(const BaseTexture &texture, GLenum textureUnit) {
 	this->texture = texture;
+	this->textureUnit = textureUnit;
 }
 
 void Mesh::BindShader(const ProgramObject &program) {
@@ -19,9 +20,10 @@ void Mesh::BindShader(const ProgramObject &program) {
 
 void Mesh::Draw(int first, int count)
 {
-	if (texture.GetId() != GLuint(-1))
-		texture.Bind();
-	if (programId != 0)
+	if (texture.GetId() != GLuint(-2))
+		texture.Bind(textureUnit);
+
+	if (programId && programId != Global::curProgram)
 		glUseProgram(programId);
 
 	glEnableVertexAttribArray(0);
@@ -50,7 +52,7 @@ void Mesh::Draw(int first, int count)
 
 void Mesh::DrawFixed(int first, int count)
 {
-	if (texture.GetId() != GLuint(-1))
+	if (texture.GetId() != GLuint(-2))
 		texture.Bind();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -178,9 +180,14 @@ bool Mesh::LoadObj(const char *filename)
 bool Mesh::LoadRaw(const char *filename)
 {
 	HANDLE hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (!hFile) return false;
+	if (hFile == INVALID_HANDLE_VALUE) return false;
 
 	DWORD bytesRead = 0;
+
+	BYTE signature[4] = { };
+	ReadFile(hFile, signature, 3, &bytesRead, NULL);
+	int a = *(int *)signature;
+	if (*(int *)signature != 0x00574152) return false;
 
 	ReadFile(hFile, &verticesCount, sizeof(int), &bytesRead, NULL);
 	ReadFile(hFile, &indicesCount, sizeof(int), &bytesRead, NULL);

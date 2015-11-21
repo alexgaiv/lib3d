@@ -1,28 +1,44 @@
 #include "global.h"
 
+GLuint Global::curProgram = 0;
 list<ProgramObject *> Global::shaders;
 Matrix44f Global::modelview, Global::projection;
 stack<Matrix44f> Global::mvStack, Global::projStack;
 
-void Global::set_mv(const Matrix44f &mat) {
-	Matrix44f m;
-	mat.GetInverse(m);
-	m = m.GetTranspose();
+void Global::set_mv(const Matrix44f &mat)
+{
+	Matrix44f mvp = projection * mat;
+	Matrix44f normalMatrix;
+	bool fnorm = true;
+
 	list<ProgramObject *>::iterator p;
-	for (p = shaders.begin(); p != shaders.end(); p++) {
+	for (p = shaders.begin(); p != shaders.end(); p++)
+	{
 		ProgramObject *po = *p;
-		po->Use();
-		po->ModelView(mat.data);
-		po->NormalMatrix(m.data);
+
+		if (po->HasNormalMatrix()) {
+			if (fnorm) {
+				mat.GetInverse(normalMatrix);
+				normalMatrix = normalMatrix.GetTranspose();
+				fnorm = false;
+			}
+			po->NormalMatrix(normalMatrix);
+		}
+
+		po->ModelView(mat);
+		po->ModelViewProjection(mvp);
 	}
 }
 
-void Global::set_proj(const Matrix44f &mat) {
+void Global::set_proj(const Matrix44f &mat)
+{
+	Matrix44f mvp = mat * modelview;
 	list<ProgramObject *>::iterator p;
-	for (p = shaders.begin(); p != shaders.end(); p++) {
+	for (p = shaders.begin(); p != shaders.end(); p++)
+	{
 		ProgramObject *po = *p;
-		po->Use();
-		po->Projection(mat.data);
+		po->Projection(mat);
+		po->ModelViewProjection(mvp);
 	}
 }
 

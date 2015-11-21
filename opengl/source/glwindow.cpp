@@ -37,7 +37,11 @@ void GLWindow::CreateFullScreen(LPCTSTR lpCaption)
 	GetClientRect(GetDesktopWindow(), &screenRect);
 
 	this->_ChangeDisplaySettings();
-	this->CreateParam(lpCaption, 0, 0, screenRect.right, screenRect.bottom, WS_POPUP, WS_EX_APPWINDOW);
+	this->CreateParam(lpCaption, 0, 0, screenRect.right, screenRect.bottom, WS_POPUP, WS_EX_TOPMOST);
+
+	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT =
+		(PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
+	if (wglSwapIntervalEXT) wglSwapIntervalEXT(1);
 }
 
 void GLWindow::MainLoop()
@@ -163,11 +167,10 @@ void GLWindow::_ChangeDisplaySettings()
 	GetClientRect(GetDesktopWindow(), &screenRect);
 
 	DEVMODE deviceMode = { };
+	EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &deviceMode);
 	deviceMode.dmSize = sizeof(DEVMODE);
 	deviceMode.dmPelsWidth = screenRect.right;
 	deviceMode.dmPelsHeight = screenRect.bottom;
-	deviceMode.dmBitsPerPel = 24;
-	deviceMode.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT|DM_BITSPERPEL;
 	ChangeDisplaySettings(&deviceMode, CDS_FULLSCREEN);
 }
 
@@ -277,6 +280,7 @@ HRESULT GLWindow::_HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 	case WM_KEYDOWN:
 		OnKeyDown(wParam);
+		return 0;
 	case WM_KEYUP:
 		OnKeyUp(wParam);
 		return 0;

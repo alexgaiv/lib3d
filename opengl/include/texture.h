@@ -9,10 +9,7 @@ public:
 	BaseTexture(GLenum target, GLuint id = GLuint(-1));
 
 	GLuint GetId() const { return id; }
-
-	void Bind() {
-		glBindTexture(target, id);
-	}
+	void Bind(GLenum textureUnit = GLenum(-1));
 	void Delete() {
 		glDeleteTextures(1, &id);
 	}
@@ -21,7 +18,7 @@ public:
 	void SetWrapMode(GLint wrapS, GLint wrapT, GLint wrapR = -1);
 protected:
 	GLuint id;
-	GLenum target;
+	GLenum target, unitTarget;
 	int width, height;
 	int internalFormat, format;
 
@@ -43,6 +40,8 @@ public:
 	bool IsLoaded() const { return loaded; }
 	bool LoadFromTGA(const char *filename);
 	void BuildMipmaps();
+	void SetTexImage(GLenum level, GLint internalFormat, GLsizei width, GLsizei height,
+		GLint border, GLenum format, GLenum type, const GLvoid *data);
 private:
 	bool loaded;
 };

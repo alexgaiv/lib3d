@@ -35,7 +35,18 @@ bool Shader::CompileFile(const char *filename)
 	glShaderSource(handle, numLines, (const GLchar **)source, NULL);
 	glCompileShader(handle);
 	delete[] source;
-		
+	return _log();
+}
+
+bool Shader::CompileSource(const char *source)
+{
+	glShaderSource(handle, 1, &source, NULL);
+	glCompileShader(handle);
+	return _log();
+}
+
+bool Shader::_log()
+{
 	GLint isCompiled = 0;
 	GLint logLen = 0;
 	glGetShaderiv(handle, GL_COMPILE_STATUS, &isCompiled);
@@ -53,7 +64,7 @@ bool Shader::CompileFile(const char *filename)
 ProgramObject::ProgramObject() {
 	Global::AttachProgram(this);
 	memset(&uniforms, 0, sizeof(uniforms));
-	linked = bad = false;
+	linked = false;
 	handle = glCreateProgram();
 }
 
@@ -65,7 +76,7 @@ ProgramObject::ProgramObject(const char *vertPath, const char *fragPath)
 {
 	Global::AttachProgram(this);
 	memset(&uniforms, 0, sizeof(uniforms));
-	linked = bad = false;
+	linked = false;
 	handle = glCreateProgram();
 
 	Shader vertShader(GL_VERTEX_SHADER, vertPath);
@@ -74,9 +85,8 @@ ProgramObject::ProgramObject(const char *vertPath, const char *fragPath)
 	if (vertShader.IsCompiled() && fragShader.IsCompiled()) {
 		AttachShader(vertShader);
 		AttachShader(fragShader);
+		Link();
 	}
-	else bad = true;
-	Link();
 }
 
 ProgramObject::~ProgramObject() {
@@ -97,7 +107,6 @@ void ProgramObject::clone(const ProgramObject &p)
 	memcpy(&uniforms, &p.uniforms, sizeof(uniforms));
 	handle = p.handle;
 	linked = p.linked;
-	bad = p.bad;
 
 	int c = p.uniforms.count;
 	if (c != 0) {
@@ -121,7 +130,10 @@ void ProgramObject::DetachShader(const Shader &shader) {
 }
 
 void ProgramObject::Use() {
-	if (linked) glUseProgram(handle);
+	if (Global::curProgram != handle) {
+		Global::curProgram = handle;
+		glUseProgram(handle);
+	}
 }
 
 bool ProgramObject::Link()
@@ -144,13 +156,11 @@ bool ProgramObject::Link()
 		OutputDebugString(infoLog);
 		delete[] infoLog;
 	}
-	linked = isLinked == TRUE;
 
+	linked = isLinked == TRUE;
 	if (linked)
 	{
-		bad = false;
 		uniforms.free();
-
 		glGetProgramiv(handle, GL_ACTIVE_UNIFORMS, &uniforms.count);
 		if (uniforms.count != 0) {
 			int maxLen = 0;
@@ -166,6 +176,7 @@ bool ProgramObject::Link()
 			uniforms.mvLoc = GetUniformLocation("ModelView");
 			uniforms.projLoc = GetUniformLocation("Projection");
 			uniforms.normLoc = GetUniformLocation("NormalMatrix");
+			uniforms.mvpLoc = GetUniformLocation("ModelViewProjection");
 		}
 	}
 
@@ -180,53 +191,70 @@ GLuint ProgramObject::GetUniformLocation(const char *name) {
 	return glGetUniformLocation(handle, name);
 }
 
-void ProgramObject::ModelView(const float *v) {
-	glUniformMatrix4fv(uniforms.mvLoc, 1, GL_FALSE, v);
+void ProgramObject::ModelView(const Matrix44f &m) {
+	if (uniforms.mvLoc != -1) {
+		Use();
+		glUniformMatrix4fv(uniforms.mvLoc, 1, GL_FALSE, m.data);
+	}
 }
 
-void ProgramObject::Projection(const float *v) {
-	glUniformMatrix4fv(uniforms.projLoc, 1, GL_FALSE, v);
+void ProgramObject::Projection(const Matrix44f &m) {
+	if (uniforms.projLoc != -1) {
+		Use();
+		glUniformMatrix4fv(uniforms.projLoc, 1, GL_FALSE, m.data);
+	}
 }
 
-void ProgramObject::NormalMatrix(const float *v) {
-	glUniformMatrix4fv(uniforms.normLoc, 1, GL_FALSE, v);
+void ProgramObject::ModelViewProjection(const Matrix44f &m) {
+	if (uniforms.mvpLoc != -1) {
+		Use();
+		glUniformMatrix4fv(uniforms.mvpLoc, 1, GL_FALSE, m.data);
+	}
+}
+
+void ProgramObject::NormalMatrix(const Matrix44f &m) {
+	if (uniforms.normLoc != -1) {
+		Use();
+		glUniformMatrix4fv(uniforms.normLoc, 1, GL_FALSE, m.data);
+	}
 }
 
 void ProgramObject::Uniform(const char *name, float v0) {
 	int i = lookup(name);
-	if (i != -1) glUniform1f(i, v0);
+	if (i != -1) { Use(); glUniform1f(i, v0); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1) {
 	int i = lookup(name);
-	if (i != -1) glUniform2f(i, v0, v1);
+	if (i != -1) { Use(); glUniform2f(i, v0, v1); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1, float v2) {
 	int i = lookup(name);
-	if (i != -1) glUniform3f(i, v0, v1, v2);
+	if (i != -1) { Use(); glUniform3f(i, v0, v1, v2); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1, float v2, float v3) {
 	int i = lookup(name);
-	if (i != -1) glUniform4f(i, v0, v1, v2, v3);
+	if (i != -1) { Use(); glUniform4f(i, v0, v1, v2, v3); }
 }
 void ProgramObject::Uniform(const char *name, int v0) {
 	int i = lookup(name);
-	if (i != -1) glUniform1i(i, v0);
+	if (i != -1) { Use(); glUniform1i(i, v0); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1) {
 	int i = lookup(name);
-	if (i != -1) glUniform2i(i, v0, v1);
+	if (i != -1) { Use(); glUniform2i(i, v0, v1); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1, int v2) {
 	int i = lookup(name);
-	if (i != -1) glUniform3i(i, v0, v1, v2);
+	if (i != -1) { Use(); glUniform3i(i, v0, v1, v2); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1, int v2, int v3) {
 	int i = lookup(name);
-	if (i != -1) glUniform4i(i, v0, v1, v2, v3);
+	if (i != -1) { Use(); glUniform4i(i, v0, v1, v2, v3); }
 }
 void ProgramObject::Uniform(const char *name, int count, const float *value) {
 	int i = lookup(name);
 	if (i != -1) {
+		Use();
 		GLenum t = uniforms.types[i];
 		if (is4(t)) glUniform4fv(i, count, value);
 		else if (is3(t)) glUniform3fv(i, count, value);
@@ -237,6 +265,7 @@ void ProgramObject::Uniform(const char *name, int count, const float *value) {
 void ProgramObject::Uniform(const char *name, int count, const int *value) {
 	int i = lookup(name);
 	if (i != -1) {
+		Use();
 		GLenum t = uniforms.types[i];
 		if (is4(t)) glUniform4iv(i, count, value);
 		else if (is3(t)) glUniform3iv(i, count, value);
@@ -249,6 +278,7 @@ void ProgramObject::UniformMatrix(const char *name, int count, bool transpose, c
 {
 	int i = lookup(name);
 	if (i != -1) {
+		Use();
 		GLenum t = uniforms.types[i];
 		if (t == GL_FLOAT_MAT4) glUniformMatrix4fv(i, count, transpose, v);
 		else if (t == GL_FLOAT_MAT3) glUniformMatrix3fv(i, count, transpose, v);
