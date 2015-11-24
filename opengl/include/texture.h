@@ -2,23 +2,30 @@
 #define _TEXTURE2D_H_
 
 #include "common.h"
+#include "datatypes.h"
+
+#define TEX_OWN_ID GLuint(-1)
 
 class BaseTexture
 {
 public:
-	BaseTexture(GLenum target, GLuint id = GLuint(-1));
+	BaseTexture(GLenum target, GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_OWN_ID);
 
 	GLuint GetId() const { return id; }
-	void Bind(GLenum textureUnit = GLenum(-1));
+	void Bind();
 	void Delete() {
 		glDeleteTextures(1, &id);
 	}
 
+	GLenum GetTextureUnit() const { return textureUnit; }
+	void SetTextureUnit(GLenum unit) { textureUnit = unit; }
+
 	void SetFilters(GLint minFilter, GLint magFilter = -1);
 	void SetWrapMode(GLint wrapS, GLint wrapT, GLint wrapR = -1);
+	void SetBorderColor(Color4f color);
 protected:
 	GLuint id;
-	GLenum target, unitTarget;
+	GLenum target, textureUnit;
 	int width, height;
 	int internalFormat, format;
 
@@ -31,8 +38,8 @@ private:
 class Texture2D : public BaseTexture
 {
 public:
-	Texture2D(GLuint id = GLuint(-1));
-	Texture2D(const char *filename, GLuint id = GLuint(-1));
+	Texture2D(GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_OWN_ID);
+	Texture2D(const char *filename, GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_OWN_ID);
 
 	int GetWidth() const { return width; }
 	int GetHeight() const { return height; }
@@ -49,8 +56,8 @@ private:
 class CubeTexture : public BaseTexture
 {
 public:
-	CubeTexture();
-	CubeTexture(const char **sides);
+	CubeTexture(GLenum textureUnit = GL_TEXTURE0);
+	CubeTexture(const char **sides, GLenum textureUnit = GL_TEXTURE0);
 
 	bool IsLoaded() const { return loaded; }
 	bool LoadFromTGA(const char **sides);

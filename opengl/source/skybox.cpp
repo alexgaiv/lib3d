@@ -67,12 +67,13 @@ char *Skybox::source[2] =
 	"}"
 };
 
-Skybox::Skybox(const char **sides) : tex(sides) {
+Skybox::Skybox(const char **sides) : tex(sides, GL_TEXTURE0) {
 	_init();
 }
 
 Skybox::Skybox(const CubeTexture &tex) {
 	this->tex = tex;
+	this->tex.SetTextureUnit(GL_TEXTURE0);
 	_init();
 }
 
@@ -104,8 +105,7 @@ void Skybox::Draw()
 	glEnableVertexAttribArray(0);
 
 	prog.Use();
-	glActiveTexture(GL_TEXTURE0);
-	tex.Bind(GL_TEXTURE0);
+	tex.Bind();
 	vertices.Bind(GL_ARRAY_BUFFER);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLES, 0, 36);

@@ -1,6 +1,8 @@
 #include "mesh.h"
 
-Mesh::Mesh() : texture(GL_TEXTURE_2D, GLuint(-2)), textureUnit(GLenum(-1)), programId(0)
+#define TEX_ID_NONE GLuint(-2)
+
+Mesh::Mesh() : texture(GL_TEXTURE_2D, TEX_OWN_ID, TEX_ID_NONE), programId(0)
 {
 	verticesCount = indicesCount = 0;
 	vertices.Bind(GL_ARRAY_BUFFER);
@@ -9,9 +11,8 @@ Mesh::Mesh() : texture(GL_TEXTURE_2D, GLuint(-2)), textureUnit(GLenum(-1)), prog
 	texCoords.Bind(GL_ARRAY_BUFFER);
 }
 
-void Mesh::BindTexture(const BaseTexture &texture, GLenum textureUnit) {
+void Mesh::BindTexture(const BaseTexture &texture) {
 	this->texture = texture;
-	this->textureUnit = textureUnit;
 }
 
 void Mesh::BindShader(const ProgramObject &program) {
@@ -20,8 +21,8 @@ void Mesh::BindShader(const ProgramObject &program) {
 
 void Mesh::Draw(int first, int count)
 {
-	if (texture.GetId() != GLuint(-2))
-		texture.Bind(textureUnit);
+	if (texture.GetId() != TEX_ID_NONE)
+		texture.Bind();
 
 	if (programId && programId != Global::curProgram)
 		glUseProgram(programId);

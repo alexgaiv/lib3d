@@ -4,6 +4,7 @@
 #include "datatypes.h"
 #include "shader.h"
 #include "mesh.h"
+#include "texture.h"
 #include <list>
 #include <stack>
 
@@ -41,8 +42,11 @@ public:
 private:
 	friend class ProgramObject;
 	friend class Mesh;
+	friend class BaseTexture;
 
 	static GLuint curProgram;
+	static GLenum curTextureUnit;
+
 	static std::list<ProgramObject *> shaders;
 	static Matrix44f modelview, projection;
 	static stack<Matrix44f> mvStack, projStack;

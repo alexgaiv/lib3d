@@ -1,6 +1,8 @@
 #include "global.h"
 
 GLuint Global::curProgram = 0;
+GLenum Global::curTextureUnit = 0;
+
 list<ProgramObject *> Global::shaders;
 Matrix44f Global::modelview, Global::projection;
 stack<Matrix44f> Global::mvStack, Global::projStack;

@@ -17,7 +17,7 @@ class Mesh
 {
 public:
 	Mesh();
-	void BindTexture(const BaseTexture &texture, GLenum textureUnit = GLenum(-1));
+	void BindTexture(const BaseTexture &texture);
 	void BindShader(const ProgramObject &program);
 
 	void Draw(int firstIndex = 0, int numIndices = -1);
@@ -40,7 +40,6 @@ private:
 	struct TexCoord { float s, t; };
 
 	BaseTexture texture;
-	GLenum textureUnit;
 	GLuint programId;
 
 	bool hasNormals;

@@ -1,4 +1,5 @@
 #include "texture.h"
+#include "global.h"
 #include <new>
 
 #pragma pack(push, 1)
@@ -19,41 +20,26 @@ struct TGAHEADER
 };
 #pragma pack(pop)
 
-BaseTexture::BaseTexture(GLenum target, GLuint id)
+BaseTexture::BaseTexture(GLenum target, GLenum unit, GLuint id)
+	: target(target), textureUnit(unit)
 {
 	width = height = 0;
 	internalFormat = format = 0;
-	this->target = target;
 
 	if (id == GLuint(-1))
 		glGenTextures(1, &this->id);
 	else {
 		this->id = id;
 	}
-
-	switch (target)
-	{
-	case GL_TEXTURE_1D:
-		unitTarget = GL_TEXTURE_BINDING_1D; break;
-	case GL_TEXTURE_2D:
-		unitTarget = GL_TEXTURE_BINDING_2D; break;
-	case GL_TEXTURE_3D:
-		unitTarget = GL_TEXTURE_BINDING_3D; break;
-	case GL_TEXTURE_CUBE_MAP:
-		unitTarget = GL_TEXTURE_BINDING_CUBE_MAP; break;
-	}
 }
 
-void BaseTexture::Bind(GLenum textureUnit) 
+void BaseTexture::Bind()
 {
-	bool f = textureUnit != GLenum(-1);
-	int prevUnit = 0;
-	if (f) {
-		glGetIntegerv(unitTarget, &prevUnit);
+	if (Global::curTextureUnit != textureUnit) {
+		Global::curTextureUnit = textureUnit;
 		glActiveTexture(textureUnit);
 	}
 	glBindTexture(target, id);
-	if (f) glActiveTexture(GL_TEXTURE0 + prevUnit);
 }
 
 void BaseTexture::SetFilters(GLint minFilter, GLint magFilter)
@@ -70,6 +56,12 @@ void BaseTexture::SetWrapMode(GLint wrapS, GLint wrapT, GLint wrapR)
 	glTexParameteri(target, GL_TEXTURE_WRAP_T, wrapT);
 	if (wrapR != -1)
 		glTexParameteri(target, GL_TEXTURE_WRAP_R, wrapR);
+}
+
+void BaseTexture::SetBorderColor(Color4f color)
+{
+	Bind();
+	glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, color.data);
 }
 
 void BaseTexture::_read(HANDLE hFile, LPVOID lpBuffer, DWORD nNumBytes)
@@ -100,15 +92,15 @@ bool BaseTexture::_loadFromTGA(const char *filename, BYTE *&data)
 		switch (tgaHeader.depth)
 		{
 		case 8:
-			internalFormat = 1;
+			internalFormat = GL_LUMINANCE;
 			format = GL_LUMINANCE;
 			break;
 		case 24:
-			internalFormat = 3;
+			internalFormat = GL_RGB;
 			format = GL_BGR;
 			break;
 		case 32:
-			internalFormat = 4;
+			internalFormat = GL_RGBA;
 			format = GL_BGRA;
 			break;
 		default:
@@ -173,12 +165,12 @@ void BaseTexture::_texImage2D(GLenum target, BYTE *imageData)
 		height, 0, format, GL_UNSIGNED_BYTE, imageData);
 }
 
-Texture2D::Texture2D(GLuint id)
-	: BaseTexture(GL_TEXTURE_2D, id), loaded(false)
+Texture2D::Texture2D(GLenum textureUnit, GLuint id)
+	: BaseTexture(GL_TEXTURE_2D, textureUnit, id), loaded(false)
 { }
 
-Texture2D::Texture2D(const char *filename, GLuint id)
-	: BaseTexture(GL_TEXTURE_2D, id), loaded(false)
+Texture2D::Texture2D(const char *filename, GLenum textureUnit, GLuint id)
+	: BaseTexture(GL_TEXTURE_2D, textureUnit, id), loaded(false)
 {
 	LoadFromTGA(filename);
 }
@@ -198,9 +190,13 @@ void Texture2D::BuildMipmaps() {
 	if (!loaded) return;
 	Bind();
 
-	BYTE *imageData = new BYTE[width*height];
+	int components = 1;
+	if (internalFormat == GL_RGB) components = 3;
+	else if (internalFormat == GL_RGBA) components = 4;
+
+	BYTE *imageData = new BYTE[width*height*components];
 	glGetTexImage(GL_TEXTURE_2D, 0, internalFormat, GL_UNSIGNED_BYTE, imageData);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height,
+	GLint a = gluBuild2DMipmaps(GL_TEXTURE_2D, components, width, height,
 		internalFormat, GL_UNSIGNED_BYTE, imageData);
 	delete [] imageData;
 }
@@ -212,12 +208,12 @@ void Texture2D::SetTexImage(GLenum level, GLint internalFormat, GLsizei width, G
 	glTexImage2D(target, level, internalFormat, width, height, border, format, type, data);
 }
 
-CubeTexture::CubeTexture()
-	: BaseTexture(GL_TEXTURE_CUBE_MAP), loaded(false)
+CubeTexture::CubeTexture(GLenum textureUnit)
+	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit), loaded(false)
 { }
 
-CubeTexture::CubeTexture(const char **sides)
-	: BaseTexture(GL_TEXTURE_CUBE_MAP), loaded(false)
+CubeTexture::CubeTexture(const char **sides, GLenum textureUnit)
+	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit), loaded(false)
 {
 	LoadFromTGA(sides);
 }
