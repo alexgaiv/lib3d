@@ -6,10 +6,13 @@
 class VertexBuffer
 {
 public:
-	VertexBuffer();
+	VertexBuffer(GLenum target = GL_ARRAY_BUFFER);
 	~VertexBuffer();
 
 	GLuint GetId() { return id; }
+
+	void AttribPointer(GLuint index, GLint size, GLenum type,
+		GLboolean normalized = GL_FALSE, GLsizei stride = 0, GLubyte offset = 0);
 
 	void Bind(GLenum target);
 	void Unbind(GLenum target);

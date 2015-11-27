@@ -125,6 +125,6 @@ void Viewer3D::calcMatr()
 	qRotation.ToMatrix(rot);
 	rot.Scale(scale);
 	matr = Global::GetProjection() * rot;
-	matr.GetInverse(matr_inv);
+	matr_inv = matr.GetInverse();
 	changed = false;
 }

@@ -20,7 +20,7 @@ void Global::set_mv(const Matrix44f &mat)
 
 		if (po->HasNormalMatrix()) {
 			if (fnorm) {
-				mat.GetInverse(normalMatrix);
+				normalMatrix = mat.GetInverse();
 				normalMatrix = normalMatrix.GetTranspose();
 				fnorm = false;
 			}

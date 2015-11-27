@@ -8,46 +8,48 @@ inline bool CmpReal(T a, T b, T eps = T(0.0001)) {
 	return (T)fabs(double(a - b)) <= eps;
 }
 
+template<class T> union Vector3;
+template<class T> union Vector4;
+template<class T> union Matrix33;
+template<class T> union Matrix44;
+
 template<class T>
-union Point2
+union Vector2
 {
 	T data[2];
 	struct {
 		T x, y;
 	};
 
-	Point2() { x = y = T(0); }
-	Point2(T x, T y) {
-		this->x = x;
-		this->y = y;
+	Vector2() { x = y = T(0); }
+	Vector2(T x, T y) {
+		this->x = x; this->y = y;
+	}
+	template<class TVector> explicit Vector2(const TVector &v) {
+		x = T(v.x); y = T(v.y);
 	}
 
-	bool operator==(const Point2<T> &p) const;
-	bool operator!=(const Point2<T> &p) const;
+	T Length() const;
+	T LengthSquared() const;
+	void Normalize();
+
+	T &operator[](int i) { return data[i]; }
+	const T &operator[](int i) const { return data[i]; }
+
+	bool operator==(const Vector2<T> &v) const;
+	bool operator!=(const Vector2<T> &v) const;
+
+	Vector2<T> operator+(const Vector2<T> &v) const;
+	Vector2<T> operator-(const Vector2<T> &v) const;
+	Vector2<T> operator-() const;
+	Vector2<T> operator*(T scale) const;
+	Vector2<T> operator/(T scale) const;
+		  
+	Vector2<T> &operator+=(const Vector2<T> &v);
+	Vector2<T> &operator-=(const Vector2<T> &v);
+	Vector2<T> &operator*=(T scale);
+	Vector2<T> &operator/=(T scale);
 };
-
-template<class T>
-union Point3
-{
-	T data[3];
-	struct {
-		T x, y, z;
-	};
-
-	Point3() { x = y = z = T(0); }
-	Point3(T x, T y, T z) {
-		this->x = x;
-		this->y = y;
-		this->z = z;
-	}
-
-	bool operator==(const Point3<T> &p) const;
-	bool operator!=(const Point3<T> &p) const;
-};
-
-template<class T> union Vector4;
-template<class T> union Matrix33;
-template<class T> union Matrix44;
 
 template<class T>
 union Vector3
@@ -61,25 +63,20 @@ union Vector3
 	Vector3(T x, T y, T z) {
 		this->x = x; this->y = y; this->z = z;
 	}
-	explicit Vector3(const Vector4<T> &v) {
+	template<class TVector> explicit Vector3(const TVector &v) {
 		x = v.x; y = v.y; z = v.z;
-	}
-	template<class T2> explicit Vector3(const Vector3<T2> &v) {
-		x = T(v.x); y = T(v.y); z = T(v.z);
 	}
 
 	T Length() const;
 	T LengthSquared() const;
 	void Normalize();
 
-	static T Dot(Vector3<T> v1, Vector3<T> v2);
-	static Vector3<T> Cross(Vector3<T> v1, Vector3<T> v2);
-
 	T &operator[](int i) { return data[i]; }
 	const T &operator[](int i) const { return data[i]; }
 
 	bool operator==(const Vector3<T> &v) const;
 	bool operator!=(const Vector3<T> &v) const;
+
 	Vector3<T> operator+(const Vector3<T> &v) const;
 	Vector3<T> operator-(const Vector3<T> &v) const;
 	Vector3<T> operator-() const;
@@ -106,13 +103,13 @@ union Vector4
 	Vector4(T x, T y, T z, T w = T(1)) {
 		this->x = x; this->y = y; this->z = z; this->w = w;
 	}
-	explicit Vector4(const Vector3<T> &v) {
+	template<class TVector> explicit Vector4(const TVector &v) {
 		x = v.x; y = v.y; z = v.z; w = T(1);
 	}
-	template<class T2> explicit Vector4(const Vector4<T2> &v) {
-		x = T(v.x); y = T(v.y); z = T(v.z); w = T(v.w);
-	}
 
+	T Length() const;
+	T LengthSquared() const;
+	void Normalize();
 	void Cartesian();
 
 	T &operator[](int i) { return data[i]; }
@@ -120,8 +117,19 @@ union Vector4
 
 	bool operator==(const Vector4<T> &v) const;
 	bool operator!=(const Vector4<T> &v) const;
+
+	Vector4<T> operator+(const Vector4<T> &v) const;
+	Vector4<T> operator-(const Vector4<T> &v) const;
+	Vector4<T> operator-() const;
+	Vector4<T> operator*(T scale) const;
 	Vector4<T> operator*(const Matrix44<T> &m) const;
+	Vector4<T> operator/(T scale) const;
+		  
+	Vector4<T> &operator+=(const Vector4<T> &v);
+	Vector4<T> &operator-=(const Vector4<T> &v);
+	Vector4<T> &operator*=(T scale);
 	Vector4<T> &operator*=(const Matrix44<T> &m);
+	Vector4<T> &operator/=(T scale);
 };
 
 template<class T>
@@ -146,7 +154,7 @@ union Matrix33
 
 	void Scale(T factor);
 	T Determinant() const;
-	bool GetInverse(Matrix33<T> &out) const;
+	Matrix33<T> GetInverse() const;
 	Matrix33<T> GetTranspose() const;
 	
 	void LoadIdentity();
@@ -191,7 +199,7 @@ union Matrix44
 
 	T Determinant() const;
 	Matrix44<T> GetTranspose() const;
-	bool GetInverse(Matrix44<T> &out) const;
+	Matrix44<T> GetInverse() const;
 
 	void LoadIdentity();
 	static Matrix44<T> Identity();
@@ -202,23 +210,6 @@ union Matrix44
 	Vector4<T> operator*(const Vector4<T> &v) const;
 	Matrix44<T> operator*(const Matrix44<T> &m) const;
 	Matrix44<T> &operator*=(const Matrix44<T> &m);
-};
-
-template<class T>
-union Color4
-{
-	T data[4];
-	struct {
-		T r, g, b, a;
-	};
-
-	Color4() { r = g = b = a = T(0); }
-	Color4(T r, T g, T b, T a = T(1)) {
-		this->r = r; this->g = g; this->b = b; this->a = a;
-	}
-
-	bool operator==(const Color4<T> &c) const;
-	bool operator!=(const Color4<T> &c) const;
 };
 
 template<class T>
@@ -233,31 +224,86 @@ union Color3
 	Color3(T r, T g, T b, T a = T(1)) {
 		this->r = r; this->g = g; this->b = b;
 	}
+	template<class TColor> explicit Color3(const TColor &c) {
+		r = c.r; g = c.g; b = c.b;
+	}
 
 	bool operator==(const Color3<T> &c) const;
 	bool operator!=(const Color3<T> &c) const;
 };
 
-typedef Point2<int>      Point2i;
-typedef Point2<float>    Point2f;
-typedef Point3<float>    Point3f;
-typedef Vector3<float>   Vector3f;
-typedef Vector4<float>   Vector4f;
+template<class T>
+union Color4
+{
+	T data[4];
+	struct {
+		T r, g, b, a;
+	};
+
+	Color4() { r = g = b = a = T(0); }
+	Color4(T r, T g, T b, T a = T(1)) {
+		this->r = r; this->g = g; this->b = b; this->a = a;
+	}
+	template<class TColor> explicit Color4(const TColor &c) {
+		r = c.r; g = c.g; b = c.b; a = c.a;
+	}
+
+	bool operator==(const Color4<T> &c) const;
+	bool operator!=(const Color4<T> &c) const;
+};
+
+typedef Vector2<int>     Vector2i,  Point2i;
+typedef Vector3<int>     Vector3i,  Point3i;
+typedef Vector4<int>     Vector4i,  Point4i;
+
+typedef Vector2<float>   Vector2f,  Point2f;
+typedef Vector3<float>   Vector3f,  Point3f;
+typedef Vector4<float>   Vector4f,  Point4f;
 typedef Matrix33<float>  Matrix33f;
 typedef Matrix44<float>  Matrix44f;
-typedef Color4<float>    Color4f;
 typedef Color3<float>    Color3f;
+typedef Color4<float>    Color4f;
 
-typedef Point2<double>   Point2d;
-typedef Point3<double>   Point3d;
-typedef Vector3<double>  Vector3d;
-typedef Vector4<double>  Vector4d;
+typedef Vector2<double>  Vector2d,  Point2d;
+typedef Vector3<double>  Vector3d,  Point3d;
+typedef Vector4<double>  Vector4d,  Point4d;
 typedef Matrix33<double> Matrix33d;
 typedef Matrix44<double> Matrix44d;
+typedef Color3<double>   Color3d;
 typedef Color4<double>   Color4d;
 
-typedef Color4<unsigned char> Color4b;
 typedef Color3<unsigned char> Color3b;
+typedef Color4<unsigned char> Color4b;
+
+template<class T>
+T Dot(Vector3<T> v1, Vector3<T> v2) {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+}
+
+template<class T>
+T Dot(Vector4<T> v1, Vector4<T> v2) {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z + v1.w*v2.w;
+}
+
+template<class T>
+Vector3<T> Cross(Vector3<T> v1, Vector3<T> v2) {
+	return Vector3<T>(
+		v1.y*v2.z - v1.z*v2.y,
+		v1.z*v2.x - v1.x*v2.z,
+		v1.x*v2.y - v1.y*v2.x);
+}
+
+template<class T>
+Vector3<T> Normalize(Vector3<T> v) {
+	T f = T(1) / v.Length();
+	return Vector3<T>(v.x*f, v.y*f, v.z*f);
+}
+
+template<class T>
+Vector4<T> Normalize(Vector4<T> v) {
+	T f = T(1) / v.Length();
+	return Vector4<T>(v.x*f, v.y*f, v.z*f, v.w*f);
+}
 
 #include "datatypes.inl"
 

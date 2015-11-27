@@ -1,12 +1,19 @@
 #include "vertexbuffer.h"
 
-VertexBuffer::VertexBuffer() : target(0)
+VertexBuffer::VertexBuffer(GLenum target) : target(target)
 {
 	glGenBuffers(1, &id);
 }
 
 VertexBuffer::~VertexBuffer() {
 	glDeleteBuffers(1, &id);
+}
+
+void VertexBuffer::AttribPointer(GLuint index, GLint size, GLenum type,
+		GLboolean normalized, GLsizei stride, GLubyte offset)
+{
+	glBindBuffer(target, id);
+	glVertexAttribPointer(index, size, type, normalized, stride, (void *)offset);
 }
 
 void VertexBuffer::Bind(GLenum target) {

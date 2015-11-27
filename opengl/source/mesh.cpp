@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "datatypes.h"
 
 #define TEX_ID_NONE GLuint(-2)
 
@@ -85,11 +86,11 @@ bool Mesh::LoadObj(const char *filename)
 	ifstream file(filename);
 	if (!file) return false;
 
-	Vertex v = { };
-	TexCoord tc = { };
+	Vector3f v;
+	Vector2f tc;
 
-	vector<Vertex> verts, norms;
-	vector<TexCoord> texs;
+	vector<Vector3f> verts, norms;
+	vector<Vector2f> texs;
 	vector<int> iverts, inorms, itexs;
 
 	string line;
@@ -112,7 +113,7 @@ bool Mesh::LoadObj(const char *filename)
 			norms.push_back(v);	 
 		}
 		else if (prefix == "vt") {
-			sscanf_s(line.c_str(), "%f %f", &tc.s, &tc.t);
+			sscanf_s(line.c_str(), "%f %f", &tc.x, &tc.y);
 			texs.push_back(tc);
 		}
 		else if (prefix == "f ")
@@ -154,8 +155,8 @@ bool Mesh::LoadObj(const char *filename)
 
 	if (hasNormals || hasTexCoords)
 	{
-		vector<Vertex> norms_new(verts.size());
-		vector<TexCoord> texs_new(verts.size());
+		vector<Vector3f> norms_new(verts.size());
+		vector<Vector2f> texs_new(verts.size());
 			
 		for (int i = 0, k = iverts.size(); i < k; i++) {
 			int ivert = iverts[i];
@@ -166,12 +167,12 @@ bool Mesh::LoadObj(const char *filename)
 		}
 
 		if (hasNormals)
-			normals.SetData(norms_new.size()*sizeof(Vertex), norms_new.data(), GL_STATIC_DRAW);
+			normals.SetData(norms_new.size()*sizeof(Vector3f), norms_new.data(), GL_STATIC_DRAW);
 		if (hasTexCoords)
-			texCoords.SetData(texs_new.size()*sizeof(TexCoord), texs_new.data(), GL_STATIC_DRAW);
+			texCoords.SetData(texs_new.size()*sizeof(Vector2f), texs_new.data(), GL_STATIC_DRAW);
 	}
 	
-	vertices.SetData(verticesCount*sizeof(Vertex), verts.data(), GL_STATIC_DRAW);
+	vertices.SetData(verticesCount*sizeof(Vector3f), verts.data(), GL_STATIC_DRAW);
 	indices.SetData(indicesCount*sizeof(int), iverts.data(), GL_STATIC_DRAW);
 
 	file.close();
@@ -195,13 +196,13 @@ bool Mesh::LoadRaw(const char *filename)
 	ReadFile(hFile, &hasNormals, 1, &bytesRead, NULL);
 	ReadFile(hFile, &hasTexCoords, 1, &bytesRead, NULL);
 
-	Vertex *verts = new Vertex[verticesCount];
+	Vector3f *verts = new Vector3f[verticesCount];
 	UINT *indx = new UINT[indicesCount];
 
-	ReadFile(hFile, verts, verticesCount*sizeof(Vertex), &bytesRead, NULL);
+	ReadFile(hFile, verts, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
 	ReadFile(hFile, indx, indicesCount*sizeof(UINT), &bytesRead, NULL);
 
-	vertices.SetData(verticesCount*sizeof(Vertex), verts, GL_STATIC_DRAW);
+	vertices.SetData(verticesCount*sizeof(Vector3f), verts, GL_STATIC_DRAW);
 	indices.SetData(indicesCount*sizeof(UINT), indx, GL_STATIC_DRAW);
 
 	delete [] verts;
@@ -209,17 +210,17 @@ bool Mesh::LoadRaw(const char *filename)
 
 	if (hasNormals)
 	{
-		Vertex *norms = new Vertex[verticesCount];
-		ReadFile(hFile, norms, verticesCount*sizeof(Vertex), &bytesRead, NULL);
-		normals.SetData(verticesCount*sizeof(Vertex), norms, GL_STATIC_DRAW);
+		Vector3f *norms = new Vector3f[verticesCount];
+		ReadFile(hFile, norms, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
+		normals.SetData(verticesCount*sizeof(Vector3f), norms, GL_STATIC_DRAW);
 		delete [] norms;
 	}
 
 	if (hasTexCoords)
 	{
-		TexCoord *texs = new TexCoord[verticesCount];
-		ReadFile(hFile, texs, verticesCount*sizeof(TexCoord), &bytesRead, NULL);
-		texCoords.SetData(verticesCount*sizeof(TexCoord), texs, GL_STATIC_DRAW);
+		Vector2f *texs = new Vector2f[verticesCount];
+		ReadFile(hFile, texs, verticesCount*sizeof(Vector2f), &bytesRead, NULL);
+		texCoords.SetData(verticesCount*sizeof(Vector2f), texs, GL_STATIC_DRAW);
 		delete [] texs;
 	}
 

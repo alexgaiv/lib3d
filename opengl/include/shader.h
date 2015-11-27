@@ -40,6 +40,7 @@ public:
 	bool Link();
 	void Use();
 
+	GLint GetAttribLocation(const char *name);
 	void BindAttribLocation(GLuint index, const char *name);
 	GLuint GetUniformLocation(const char *name);
 

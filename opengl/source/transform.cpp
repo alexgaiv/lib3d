@@ -73,8 +73,8 @@ Matrix44f LookAt(Vector3f eye, Vector3f center, Vector3f up)
 {
 	Matrix44f ret;
 	Vector3f z = eye - center;
-	Vector3f x = Vector3f::Cross(up, z);
-	Vector3f y = Vector3f::Cross(z, x);
+	Vector3f x = Cross(up, z);
+	Vector3f y = Cross(z, x);
 
 	x.Normalize();
 	y.Normalize();

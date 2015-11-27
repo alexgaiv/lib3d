@@ -36,9 +36,6 @@ public:
 	VertexBuffer normals;
 	VertexBuffer texCoords;
 private:
-	struct Vertex { float x, y, z; };
-	struct TexCoord { float s, t; };
-
 	BaseTexture texture;
 	GLuint programId;
 

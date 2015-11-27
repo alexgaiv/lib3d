@@ -9,16 +9,16 @@ Camera::Camera(CameraType type) : type(type) {
 Matrix44f Camera::GetViewMatrix()
 {
 	x.Normalize();
-	y = Vector3f::Cross(z, x);
+	y = Cross(z, x);
 	y.Normalize();
-	x = Vector3f::Cross(y, z);
+	x = Cross(y, z);
 	x.Normalize();
 
 	Matrix44f view;
 	view.xAxis = Vector3f(x.x, y.x, z.x);
 	view.yAxis = Vector3f(x.y, y.y, z.y);
 	view.zAxis = Vector3f(x.z, y.z, z.z);
-	view.translate = Vector3f(-t.Dot(t, x), -t.Dot(t, y), -t.Dot(t, z));
+	view.translate = Vector3f(-Dot(t, x), -Dot(t, y), -Dot(t, z));
 	return view;
 }
 

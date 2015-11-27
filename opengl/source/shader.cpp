@@ -183,6 +183,10 @@ bool ProgramObject::Link()
 	return linked;
 }
 
+GLint ProgramObject::GetAttribLocation(const char *name) {
+	return glGetAttribLocation(handle, name);
+}
+
 void ProgramObject::BindAttribLocation(GLuint index, const char *name) {
 	glBindAttribLocation(handle, index, name);
 }
