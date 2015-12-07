@@ -3,13 +3,11 @@
 
 #define TEX_ID_NONE GLuint(-2)
 
-Mesh::Mesh() : texture(GL_TEXTURE_2D, TEX_OWN_ID, TEX_ID_NONE), programId(0)
+Mesh::Mesh()
+	: texture(GL_TEXTURE_2D, TEX_OWN_ID, TEX_ID_NONE), programId(0)
 {
 	verticesCount = indicesCount = 0;
-	vertices.Bind(GL_ARRAY_BUFFER);
-	indices.Bind(GL_ELEMENT_ARRAY_BUFFER);
-	normals.Bind(GL_ARRAY_BUFFER);
-	texCoords.Bind(GL_ARRAY_BUFFER);
+	indices.SetTarget(GL_ELEMENT_ARRAY_BUFFER);
 }
 
 void Mesh::BindTexture(const BaseTexture &texture) {
@@ -29,22 +27,22 @@ void Mesh::Draw(int first, int count)
 		glUseProgram(programId);
 
 	glEnableVertexAttribArray(0);
-	vertices.Bind(GL_ARRAY_BUFFER);
+	vertices.Bind();
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	if (hasNormals) {
 		glEnableVertexAttribArray(1);
-		normals.Bind(GL_ARRAY_BUFFER);
+		normals.Bind();
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
 	if (hasTexCoords) {
 		glEnableVertexAttribArray(2);
-		texCoords.Bind(GL_ARRAY_BUFFER);
+		texCoords.Bind();
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
-	indices.Bind(GL_ELEMENT_ARRAY_BUFFER);
+	indices.Bind();
 	glDrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, (void *)first);
 
 	glDisableVertexAttribArray(0);
@@ -58,22 +56,22 @@ void Mesh::DrawFixed(int first, int count)
 		texture.Bind();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	vertices.Bind(GL_ARRAY_BUFFER);
+	vertices.Bind();
 	glVertexPointer(3, GL_FLOAT, 0, 0);
 
 	if (hasNormals) {
 		glEnableClientState(GL_NORMAL_ARRAY);
-		normals.Bind(GL_ARRAY_BUFFER);
+		normals.Bind();
 		glNormalPointer(GL_FLOAT, 0, 0);
 	}
 
 	if (hasTexCoords) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		texCoords.Bind(GL_ARRAY_BUFFER);
+		texCoords.Bind();
 		glTexCoordPointer(2, GL_FLOAT, 0, 0);
 	}
 
-	indices.Bind(GL_ELEMENT_ARRAY_BUFFER);
+	indices.Bind();
 	glDrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, (void *)first);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -149,22 +147,60 @@ bool Mesh::LoadObj(const char *filename)
 
 	verticesCount = verts.size();
 	indicesCount = iverts.size();
-
 	hasNormals = norms.size() != 0;
 	hasTexCoords = texs.size() != 0;
 
 	if (hasNormals || hasTexCoords)
 	{
-		vector<Vector3f> norms_new(verts.size());
-		vector<Vector2f> texs_new(verts.size());
-			
-		for (int i = 0, k = iverts.size(); i < k; i++) {
-			int ivert = iverts[i];
-			if (hasNormals)
-				norms_new[ivert] = norms[inorms[i]];
-			if (hasTexCoords)
-				texs_new[ivert] = texs[itexs[i]];
+		vector<Vector3f> norms_new;
+		vector<Vector2f> texs_new;
+
+		if (hasNormals) {
+			norms_new.resize(verticesCount);
+			memset(&norms_new[0], -1, verticesCount * sizeof(Vector3f));
 		}
+		if (hasTexCoords) {
+			texs_new.resize(verticesCount);
+			memset(&texs_new[0], -1, verticesCount * sizeof(Vector2f));
+		}
+
+		for (int i = 0, k = iverts.size(); i < k; i++) {
+			int iv = iverts[i];
+			int it = hasTexCoords ? itexs[i] : 0;
+			int in = hasNormals ? inorms[i] : 0;
+
+			if ((!hasNormals || *(int *)&norms_new[iv].x == -1) &&
+				(!hasTexCoords || *(int *)&texs_new[iv].x == -1))
+			{
+				if (hasNormals) norms_new[iv] = norms[in];
+				if (hasTexCoords) texs_new[iv] = texs[it];
+			}
+			else if (hasNormals && norms_new[iv] != norms[in] ||
+				     hasTexCoords && texs_new[iv] != texs[it])
+			{
+ 				int same = -1;
+				for (int j = verticesCount, n = verts.size(); j < n; j++)
+				{
+					if (verts[j] == verts[iv] &&
+						(!hasNormals || norms_new[j] == norms[in]) &&
+						(!hasTexCoords || texs_new[j] == texs[it]))
+					{
+						same = j;
+						break;
+					}
+				}
+
+				if (same != -1) iverts[i] = same;
+				else {
+					iverts[i] = verts.size();
+					verts.push_back(verts[iv]);
+					if (hasNormals) norms_new.push_back(norms[in]);
+					if (hasTexCoords) texs_new.push_back(texs[it]);
+				}
+			}
+		}
+
+		verticesCount = verts.size();
 
 		if (hasNormals)
 			normals.SetData(norms_new.size()*sizeof(Vector3f), norms_new.data(), GL_STATIC_DRAW);

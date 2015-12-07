@@ -25,11 +25,11 @@ public:
 	bool LoadObj(const char *filename);
 	bool LoadRaw(const char *filename);
 
-	bool HasNormals() { return hasNormals; }
-	bool HasTexCoords() { return hasTexCoords; }
-	int GetVerticesCount() { return verticesCount; }
-	int GetIndicesCount() { return indicesCount; }
-	int GetFaceCount() { return indicesCount / 3; }
+	bool HasNormals() const { return hasNormals; }
+	bool HasTexCoords() const { return hasTexCoords; }
+	int GetVerticesCount() const { return verticesCount; }
+	int GetIndicesCount() const { return indicesCount; }
+	int GetFaceCount() const { return indicesCount / 3; }
 
 	VertexBuffer vertices;
 	VertexBuffer indices;

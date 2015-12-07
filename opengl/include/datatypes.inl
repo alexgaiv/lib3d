@@ -300,19 +300,20 @@ Matrix33<T>::Matrix33(const T m[9]) {
 }
 
 template<class T>
-Matrix33<T>::Matrix33(const Matrix44<T> &m) {
-	xAxis = m.xAxis;
-	yAxis = m.yAxis;
-	zAxis = m.zAxis;
-}
+template<class T2>
+Matrix33<T>::Matrix33(const Matrix33<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{ }
 
 template<class T>
 template<class T2>
-Matrix33<T>::Matrix33(const Matrix33<T2> &m) {
-	for (int i = 0; i < 9; i++) {
-		data[i] = T(m.data[i]);
-	}
-}
+Matrix33<T>::Matrix33(const Matrix44<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{ }
 
 template<class T>
 void Matrix33<T>::Scale(T factor) {
@@ -428,11 +429,13 @@ Matrix44<T>::Matrix44(const T m[16]) {
 }
 
 template<class T>
-Matrix44<T>::Matrix44(const Matrix33<T> &m) {
+template<class T2>
+Matrix44<T>::Matrix44(const Matrix33<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{
 	wx = wy = wz = T(0); wt = T(1);
-	xAxis = m.xAxis;
-	yAxis = m.yAxis;
-	zAxis = m.zAxis;
 }
 
 template<class T>

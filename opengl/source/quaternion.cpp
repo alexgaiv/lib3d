@@ -35,9 +35,7 @@ float Quaternion::Angle() const {
 }
 
 Vector3f Quaternion::Axis() const {
-	Vector3f axis(x, y, z);
-	axis.Normalize();
-	return axis;
+	return ::Normalize(Vector3f(x, y, z));
 }
 
 Quaternion Quaternion::GetConjugate() const {

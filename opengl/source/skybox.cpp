@@ -79,7 +79,6 @@ Skybox::Skybox(const CubeTexture &tex) {
 
 void Skybox::_init()
 {
-	vertices.Bind(GL_ARRAY_BUFFER);
 	vertices.SetData(sizeof(vertsData), vertsData, GL_STATIC_DRAW);
 
 	Shader vshader(GL_VERTEX_SHADER);
@@ -106,7 +105,7 @@ void Skybox::Draw()
 
 	prog.Use();
 	tex.Bind();
-	vertices.Bind(GL_ARRAY_BUFFER);
+	vertices.Bind();
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 

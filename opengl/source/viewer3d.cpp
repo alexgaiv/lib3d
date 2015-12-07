@@ -81,7 +81,7 @@ void Viewer3D::SetOrtho(float left, float right, float bottom, float top,
 	view.h = abs(bottom - top);
 	view.fw = view.w / winWidth;
 	view.fh = view.h / winHeight;
-	rot.translate = Vector3f();
+	rot.translate = Vector3f(0);
 
 	Global::SetProjection(Ortho(left, right, bottom, top, zNear, zFar));
 	changed = true;
@@ -99,7 +99,7 @@ void Viewer3D::SetPerspective(float fovy, float zNear, float zFar,
 	view.w *= 2.0f; view.h *= 2.0f;
 	view.fw = view.w / winWidth;
 	view.fh = view.h / winHeight;
-	rot.translate = Vector3f(center.x, center.y, center.z);
+	rot.translate = center;
 	changed = true;
 }
 

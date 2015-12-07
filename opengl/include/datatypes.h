@@ -21,12 +21,19 @@ union Vector2
 		T x, y;
 	};
 
-	Vector2() { x = y = T(0); }
+	Vector2(T init = T(0)) { x = y = init; }
 	Vector2(T x, T y) {
 		this->x = x; this->y = y;
 	}
-	template<class TVector> explicit Vector2(const TVector &v) {
-		x = T(v.x); y = T(v.y);
+	
+	template<class T2> operator Vector2<T2>() const {
+		return Vector2<T2>(T2(x), T2(y));
+	}
+	template<class T2> operator Vector3<T2>() const {
+		return Vector3<T2>(T2(x), T2(y), T2(0));
+	}
+	template<class T2> operator Vector4<T2>() const {
+		return Vector4<T2>(T2(x), T2(y), T2(0), T2(1));
 	}
 
 	T Length() const;
@@ -59,12 +66,19 @@ union Vector3
 		T x, y, z;
 	};
 
-	Vector3() { x = y = z = T(0); }
+	Vector3(T init = T(0)) { x = y = z = init; }
 	Vector3(T x, T y, T z) {
 		this->x = x; this->y = y; this->z = z;
 	}
-	template<class TVector> explicit Vector3(const TVector &v) {
-		x = v.x; y = v.y; z = v.z;
+
+	template<class T2> operator Vector2<T2>() const {
+		return Vector2<T2>(T2(x), T2(y));
+	}
+	template<class T2> operator Vector3<T2>() const {
+		return Vector3<T2>(T2(x), T2(y), T2(z));
+	}
+	template<class T2> operator Vector4<T2>() const {
+		return Vector4<T2>(T2(x), T2(y), T2(z), T2(1));
 	}
 
 	T Length() const;
@@ -100,11 +114,19 @@ union Vector4
 	};
 
 	Vector4() { x = y = z = T(0); w = T(1); }
+	Vector4(T init) { x = y = z = w = init; }
 	Vector4(T x, T y, T z, T w = T(1)) {
 		this->x = x; this->y = y; this->z = z; this->w = w;
 	}
-	template<class TVector> explicit Vector4(const TVector &v) {
-		x = v.x; y = v.y; z = v.z; w = T(1);
+
+	template<class T2> operator Vector2<T2>() const {
+		return Vector2<T2>(T2(x), T2(y));
+	}
+	template<class T2> operator Vector3<T2>() const {
+		return Vector3<T2>(T2(x), T2(y), T2(z));
+	}
+	template<class T2> operator Vector4<T2>() const {
+		return Vector4<T2>(T2(x), T2(y), T2(z), T2(w));
 	}
 
 	T Length() const;
@@ -149,8 +171,8 @@ union Matrix33
 		data[0] = data[4] = data[8] = diag;
 	}
 	Matrix33(const T m[9]);
-	explicit Matrix33(const Matrix44<T> &m);
 	template<class T2> explicit Matrix33(const Matrix33<T2> &m);
+	template<class T2> explicit Matrix33(const Matrix44<T2> &m);
 
 	void Scale(T factor);
 	T Determinant() const;
@@ -191,7 +213,7 @@ union Matrix44
 		data[0] = data[5] = data[10] = data[15] = diag;
 	}
 	Matrix44(const T m[16]);
-	explicit Matrix44(const Matrix33<T> &m);
+	template<class T2> explicit Matrix44(const Matrix33<T2> &m);
 	template<class T2> explicit Matrix44(const Matrix44<T2> &m);
 
 	void Scale(T factor);
@@ -212,6 +234,8 @@ union Matrix44
 	Matrix44<T> &operator*=(const Matrix44<T> &m);
 };
 
+template<class T> union Color4;
+
 template<class T>
 union Color3
 {
@@ -220,12 +244,16 @@ union Color3
 		T r, g, b;
 	};
 
-	Color3() { r = g = b = T(0); }
+	Color3(T init = T(0)) { r = g = b = init; }
 	Color3(T r, T g, T b, T a = T(1)) {
 		this->r = r; this->g = g; this->b = b;
 	}
-	template<class TColor> explicit Color3(const TColor &c) {
-		r = c.r; g = c.g; b = c.b;
+	
+	template<class T2> operator Color3<T2>() {
+		return Color3<T2>(T2(r), T2(g), T2(b));
+	}
+	template<class T2> operator Color4<T2>() {
+		return Color4<T2>(T2(r), T2(g), T2(b));
 	}
 
 	bool operator==(const Color3<T> &c) const;
@@ -240,12 +268,17 @@ union Color4
 		T r, g, b, a;
 	};
 
-	Color4() { r = g = b = a = T(0); }
+	Color4() { r = g = b = T(0); a = T(1); }
+	Color4(T init) { r = g = b = a = init; }
 	Color4(T r, T g, T b, T a = T(1)) {
 		this->r = r; this->g = g; this->b = b; this->a = a;
 	}
-	template<class TColor> explicit Color4(const TColor &c) {
-		r = c.r; g = c.g; b = c.b; a = c.a;
+	
+	template<class T2> operator Color3<T2>() {
+		return Color3<T2>(T2(r), T2(g), T2(b));
+	}
+	template<class T2> operator Color4<T2>() {
+		return Color4<T2>(T2(r), T2(g), T2(b), T2(a));
 	}
 
 	bool operator==(const Color4<T> &c) const;

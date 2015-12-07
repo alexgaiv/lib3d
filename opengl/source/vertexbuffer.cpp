@@ -1,7 +1,6 @@
 #include "vertexbuffer.h"
 
-VertexBuffer::VertexBuffer(GLenum target) : target(target)
-{
+VertexBuffer::VertexBuffer(GLenum target) : target(target) {
 	glGenBuffers(1, &id);
 }
 
@@ -12,47 +11,38 @@ VertexBuffer::~VertexBuffer() {
 void VertexBuffer::AttribPointer(GLuint index, GLint size, GLenum type,
 		GLboolean normalized, GLsizei stride, GLubyte offset)
 {
-	glBindBuffer(target, id);
+	Bind();
 	glVertexAttribPointer(index, size, type, normalized, stride, (void *)offset);
 }
 
-void VertexBuffer::Bind(GLenum target) {
-	this->target = target;
-	glBindBuffer(target, id);
-}
-
-void VertexBuffer::Unbind(GLenum target) {
-	glBindBuffer(target, 0);
-}
-
 void VertexBuffer::SetData(GLsizeiptr size, const void *data, GLenum usage) {
-	glBindBuffer(target, id);
+	Bind();
 	glBufferData(target, size, data, usage);
 }
 
 void VertexBuffer::SetSubData(GLintptr offset, GLsizeiptr size, const void *data) {
-	glBindBuffer(target, id);
+	Bind();
 	glBufferSubData(target, offset, size, data);
 }
 
 void VertexBuffer::GetSubData(GLintptr offset, GLsizeiptr size, void *data) {
-	glBindBuffer(target, id);
+	Bind();
 	glGetBufferSubData(target, offset, size, data);
 }
 
 int VertexBuffer::GetSize() {
-	int size;
-	glBindBuffer(target, id);
+	int size = 0;
+	Bind();
 	glGetBufferParameteriv(target, GL_BUFFER_SIZE, &size);
 	return size;
 }
 
 void *VertexBuffer::Map(GLenum access) {
-	glBindBuffer(target, id);
+	Bind();
 	return glMapBuffer(target, access);
 }
 
 bool VertexBuffer::Unmap() {
-	glBindBuffer(target, id);
+	Bind();
 	return glUnmapBuffer(target) == GL_TRUE;
 }
