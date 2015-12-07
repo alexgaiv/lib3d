@@ -120,7 +120,7 @@ bool BaseTexture::_loadFromTGA(const char *filename, BYTE *&data)
 		height = tgaHeader.height;
 
 		int rowSize = imageSize / height;
-		if (~tgaHeader.descriptor & 0x10) {
+		if ((~tgaHeader.descriptor & 0x10)) {
 			BYTE *tmp = new BYTE[rowSize];
 			for (int i = 0; i < height / 2; i++)
 			{
@@ -134,16 +134,18 @@ bool BaseTexture::_loadFromTGA(const char *filename, BYTE *&data)
 		}
 
 		if (tgaHeader.descriptor & 8) {
-			RGBTRIPLE tmp;
+			int components = tgaHeader.depth / 8;
+			BYTE *tmp = new BYTE[components];
 			for (int i = 0; i < height; i++) {
 				for (int j = 0; j < width / 2; j++) {
-					RGBTRIPLE *p1 = (RGBTRIPLE *)&data[rowSize*i+j*3];
-					RGBTRIPLE *p2 = (RGBTRIPLE *)&data[rowSize*i+(rowSize - (j+1)*3)];
-					tmp = *p1;
-					*p1 = *p2;
-					*p2 = tmp;
+					BYTE *c1 = &data[rowSize*i + j*components];
+					BYTE *c2 = &data[rowSize*i + (rowSize - (j+1)*components)];
+					memcpy(tmp, c1, components);
+					memcpy(c1, c2, components);
+					memcpy(c2, tmp, components);
 				}
 			}
+			delete [] tmp;
 		}
 	}
 	catch(bool) {
