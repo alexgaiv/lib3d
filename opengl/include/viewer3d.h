@@ -32,7 +32,7 @@ public:
 	void SetRotationSpeed(float factor)
 		{ isConstSpeed = false; view.s = 1.0f / factor; }
 	void SetConstRotationSpeed(float rotSpeed)
-		{ isConstSpeed = true; constSpeedValue = rotSpeed; }
+		{ isConstSpeed = true; constSpeedValue = 1.0f / rotSpeed; }
 private:
 	bool isConstSpeed;
 	float constSpeedValue;

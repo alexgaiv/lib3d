@@ -26,7 +26,7 @@ BaseTexture::BaseTexture(GLenum target, GLenum unit, GLuint id)
 	width = height = 0;
 	internalFormat = format = 0;
 
-	if (id == GLuint(-1))
+	if (id == TEX_OWN_ID)
 		glGenTextures(1, &this->id);
 	else {
 		this->id = id;

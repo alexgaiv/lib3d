@@ -16,7 +16,9 @@ const struct {
 	int Vertex;
 	int Normal;
 	int TexCoord;
-} AttribsLocations = { 0, 1, 2 };
+	int Tangent;
+	int Binormal;
+} AttribsLocations = { 0, 1, 2, 3, 4 };
 
 class Global
 {

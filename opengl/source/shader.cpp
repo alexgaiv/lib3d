@@ -144,6 +144,8 @@ bool ProgramObject::Link()
 	BindAttribLocation(AttribsLocations.Vertex, "Vertex");
 	BindAttribLocation(AttribsLocations.Normal, "Normal");
 	BindAttribLocation(AttribsLocations.TexCoord, "TexCoord");
+	BindAttribLocation(AttribsLocations.Tangent, "Tangent");
+	BindAttribLocation(AttribsLocations.Binormal, "Binormal");
 
 	glLinkProgram(handle);
 	glGetProgramiv(handle, GL_LINK_STATUS, &isLinked);

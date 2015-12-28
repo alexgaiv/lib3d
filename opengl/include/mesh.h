@@ -17,13 +17,6 @@ class Mesh
 {
 public:
 	Mesh();
-	void BindTexture(const BaseTexture &texture);
-	void BindShader(const ProgramObject &program);
-
-	void Draw(int firstIndex = 0, int numIndices = -1);
-	void DrawFixed(int firstIndex = 0, int numIndices = -1);
-	bool LoadObj(const char *filename);
-	bool LoadRaw(const char *filename);
 
 	bool HasNormals() const { return hasNormals; }
 	bool HasTexCoords() const { return hasTexCoords; }
@@ -31,13 +24,28 @@ public:
 	int GetIndicesCount() const { return indicesCount; }
 	int GetFaceCount() const { return indicesCount / 3; }
 
+	void BindTexture(const BaseTexture &texture);
+	void BindNormalMap(const Texture2D &normalMap);
+	void BindSpecularMap(const Texture2D &specMap);
+	void BindShader(const ProgramObject &program);
+
+	void RecalcTangents();
+
+	void Draw(int firstIndex = 0, int numIndices = -1);
+	void DrawFixed(int firstIndex = 0, int numIndices = -1);
+	bool LoadObj(const char *filename);
+	bool LoadRaw(const char *filename);
+
 	VertexBuffer vertices;
 	VertexBuffer indices;
 	VertexBuffer normals;
 	VertexBuffer texCoords;
+	VertexBuffer tangents, binormals;
 private:
 	BaseTexture texture;
+	Texture2D normalMap, specularMap;
 	GLuint programId;
+	bool tangentsComputed;
 
 	bool hasNormals;
 	bool hasTexCoords;
