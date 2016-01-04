@@ -4,6 +4,7 @@
 
 Shader::Shader(GLenum type) {
 	handle = glCreateShader(type);
+	compiled = false;
 }
 
 Shader::Shader(GLenum type, const char *path) {
@@ -58,6 +59,7 @@ bool Shader::_log()
 		OutputDebugString(infoLog);
 		delete[] infoLog;
 	}
+	compiled = isCompiled ? true : false;
 	return isCompiled == TRUE;
 }
 

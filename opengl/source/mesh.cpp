@@ -101,19 +101,16 @@ void Mesh::Draw(int first, int count)
 		glUseProgram(programId);
 
 	glEnableVertexAttribArray(AttribsLocations.Vertex);
-	vertices.Bind();
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	vertices.AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
 
 	if (hasNormals) {
 		glEnableVertexAttribArray(AttribsLocations.Normal);
-		normals.Bind();
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		normals.AttribPointer(AttribsLocations.Normal, 3, GL_FLOAT);
 	}
 
 	if (hasTexCoords) {
 		glEnableVertexAttribArray(AttribsLocations.TexCoord);
-		texCoords.Bind();
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		texCoords.AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
 	}
 
 	indices.Bind();
