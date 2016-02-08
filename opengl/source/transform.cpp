@@ -69,7 +69,7 @@ Matrix44f Perspective(float fovY, float aspect, float zNear, float zFar)
 	return Frustum(-fw, fw, -fh, fh, zNear, zFar);
 }
 
-Matrix44f LookAt(Vector3f eye, Vector3f center, Vector3f up)
+Matrix44f LookAt(const Vector3f &eye, const Vector3f &center, const Vector3f &up)
 {
 	Matrix44f ret;
 	Vector3f z = eye - center;
@@ -86,4 +86,30 @@ Matrix44f LookAt(Vector3f eye, Vector3f center, Vector3f up)
 
 	ret.translate = Matrix33f(ret) * eye;
 	return ret;
+}
+
+Vector3f Project(Vector3f objPos, const Matrix44f &modelview, const Matrix44f &projection, int viewport[4])
+{
+	Vector4f v = projection * modelview * objPos;
+	v.Cartesian();
+	return Vector3f(
+		(v.x*0.5f + 0.5f)*viewport[2] + viewport[0],
+		(v.y*0.5f + 0.5f)*viewport[3] + viewport[1],
+		(1.0f + v.z) * 0.5f);
+}
+
+Vector3f UnProject(Vector3f winPos, const Matrix44f &modelview, const Matrix44f &projection, int viewport[4])
+{
+	Vector4f v(
+		(winPos.x - viewport[0]) / viewport[2] * 2.0f - 1.0f,
+		(winPos.y - viewport[1]) / viewport[3] * 2.0f - 1.0f,
+		2.0f * winPos.z - 1.0f,
+		1.0f
+	);
+
+	Matrix44f m_inv = (projection * modelview).GetInverse();
+	v *= m_inv;
+	v.Cartesian();
+
+	return v;
 }
