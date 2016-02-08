@@ -198,7 +198,7 @@ void Texture2D::BuildMipmaps() {
 
 	BYTE *imageData = new BYTE[width*height*components];
 	glGetTexImage(GL_TEXTURE_2D, 0, internalFormat, GL_UNSIGNED_BYTE, imageData);
-	GLint a = gluBuild2DMipmaps(GL_TEXTURE_2D, components, width, height,
+	gluBuild2DMipmaps(GL_TEXTURE_2D, components, width, height,
 		internalFormat, GL_UNSIGNED_BYTE, imageData);
 	delete [] imageData;
 }
