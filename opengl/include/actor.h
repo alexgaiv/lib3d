@@ -4,7 +4,6 @@
 #include "common.h"
 #include "quaternion.h"
 #include "mesh.h"
-#include "global.h"
 
 class Actor
 {
@@ -15,21 +14,23 @@ public:
 	Matrix44f transform;
 	Mesh mesh;
 
-	Actor() : scale(1.0f) { }
+	Actor(GLRenderingContext *rc) : rc(rc), mesh(rc), scale(1.0f) { }
 
 	void ApplyTransform() {
 		rotation.ToMatrix(transform);
 		transform.translate = location;
 		if (scale != 1.0f) transform.Scale(scale);
-		Global::MultModelView(transform);
+		rc->MultModelView(transform);
 	}
 
 	void Draw() {
-		Global::PushModelView();
+		rc->PushModelView();
 		ApplyTransform();
 		mesh.Draw();
-		Global::PopModelView();
+		rc->PopModelView();
 	}
+protected:
+	GLRenderingContext *rc;
 };
 
 #endif // _ACTOR_H_

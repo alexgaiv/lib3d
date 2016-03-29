@@ -1,19 +1,14 @@
 #include "shader.h"
-#include "global.h"
 #include <strsafe.h>
 
-Shader::Shader(GLenum type) {
-	handle = glCreateShader(type);
+Shader::Shader(GLenum type) : ptr(new Shared) {
+	ptr->handle = glCreateShader(type);
 	compiled = false;
 }
 
-Shader::Shader(GLenum type, const char *path) {
-	handle = glCreateShader(type);
+Shader::Shader(GLenum type, const char *path) : ptr(new Shared) {
+	ptr->handle = glCreateShader(type);
 	compiled = CompileFile(path);
-}
-
-Shader::~Shader() {
-	glDeleteShader(handle);
 }
 
 bool Shader::CompileFile(const char *filename)
@@ -33,16 +28,16 @@ bool Shader::CompileFile(const char *filename)
 		source[i] = lines[i].c_str();
 	}
 
-	glShaderSource(handle, numLines, (const GLchar **)source, NULL);
-	glCompileShader(handle);
-	delete[] source;
+	glShaderSource(ptr->handle, numLines, (const GLchar **)source, NULL);
+	glCompileShader(ptr->handle);
+	delete [] source;
 	return _log();
 }
 
-bool Shader::CompileSource(const char *source)
+bool Shader::CompileSource(const char *source, int length)
 {
-	glShaderSource(handle, 1, &source, NULL);
-	glCompileShader(handle);
+	glShaderSource(ptr->handle, 1, &source, length ? &length : NULL);
+	glCompileShader(ptr->handle);
 	return _log();
 }
 
@@ -50,36 +45,60 @@ bool Shader::_log()
 {
 	GLint isCompiled = 0;
 	GLint logLen = 0;
-	glGetShaderiv(handle, GL_COMPILE_STATUS, &isCompiled);
-	glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &logLen);
+	glGetShaderiv(ptr->handle, GL_COMPILE_STATUS, &isCompiled);
+	glGetShaderiv(ptr->handle, GL_INFO_LOG_LENGTH, &logLen);
 
 	if (logLen != 0) {
 		GLchar *infoLog = new GLchar[logLen];
-		glGetShaderInfoLog(handle, logLen, &logLen, infoLog);
+		glGetShaderInfoLog(ptr->handle, logLen, &logLen, infoLog);
 		OutputDebugString(infoLog);
-		delete[] infoLog;
+		delete [] infoLog;
 	}
 	compiled = isCompiled ? true : false;
 	return isCompiled == TRUE;
 }
 
-ProgramObject::ProgramObject() {
-	Global::AttachProgram(this);
-	memset(&uniforms, 0, sizeof(uniforms));
-	linked = false;
-	handle = glCreateProgram();
-}
-
-ProgramObject::ProgramObject(const ProgramObject &p) {
-	clone(p);
-}
-
-ProgramObject::ProgramObject(const char *vertPath, const char *fragPath)
+_PO_Shared::_PO_Shared(GLRenderingContext *rc) : rc(rc), handle(0)
 {
-	Global::AttachProgram(this);
-	memset(&uniforms, 0, sizeof(uniforms));
+	rc->AttachProgram(this);
+	fUpdateMV = fUpdateProj = true;
+}
+
+_PO_Shared::~_PO_Shared()
+{
+	rc->DetachProgram(this);
+	glDeleteProgram(handle);
+}
+
+_PO_Shared::Uniforms::Uniforms()
+{
+	count = 0;
+	names = NULL;
+	types = NULL;
+	mvLoc = projLoc = mvpLoc = normLoc = 0;
+}
+
+void _PO_Shared::Uniforms::free() {
+	if (count == 0) return;
+	for (int i = 0; i < count; i++) {
+		delete [] names[i];
+	}
+	delete [] names;
+	delete [] types;
+}
+
+ProgramObject::ProgramObject(GLRenderingContext *rc)
+	: rc(rc), ptr(new _PO_Shared(rc))
+{
+	ptr->handle = glCreateProgram();
 	linked = false;
-	handle = glCreateProgram();
+}
+
+ProgramObject::ProgramObject(GLRenderingContext *rc, const char *vertPath, const char *fragPath)
+	: rc(rc), ptr(new _PO_Shared(rc))
+{
+	ptr->handle = glCreateProgram();
+	linked = false;
 
 	Shader vertShader(GL_VERTEX_SHADER, vertPath);
 	Shader fragShader(GL_FRAGMENT_SHADER, fragPath);
@@ -91,50 +110,56 @@ ProgramObject::ProgramObject(const char *vertPath, const char *fragPath)
 	}
 }
 
-ProgramObject::~ProgramObject() {
-	Global::DetachProgram(this);
-	glDeleteProgram(handle);
-	uniforms.free();
-}
-
-ProgramObject &ProgramObject::operator=(const ProgramObject &p)
-{
-	uniforms.free();
-	clone(p);
-	return *this;
-}
-
-void ProgramObject::clone(const ProgramObject &p)
-{
-	memcpy(&uniforms, &p.uniforms, sizeof(uniforms));
-	handle = p.handle;
-	linked = p.linked;
-
-	int c = p.uniforms.count;
-	if (c != 0) {
-		uniforms.names = new char *[c];
-		uniforms.types = new GLenum[c];
-		for (int i = 0; i < c; i++) {
-			int len = strlen(p.uniforms.names[i]) + 1;
-			uniforms.names[i] = new char[len];
-			uniforms.types[i] = p.uniforms.types[i];
-			StringCchCopyA(uniforms.names[i], len, p.uniforms.names[i]);
-		}
-	}
-}
-
 void ProgramObject::AttachShader(const Shader &shader) {
-	glAttachShader(handle, shader.Handle());
+	glAttachShader(ptr->handle, shader.Handle());
 }
 
 void ProgramObject::DetachShader(const Shader &shader) {
-	glDetachShader(handle, shader.Handle());
+	glDetachShader(ptr->handle, shader.Handle());
 }
 
-void ProgramObject::Use() {
-	if (Global::curProgram != handle) {
-		Global::curProgram = handle;
-		glUseProgram(handle);
+void ProgramObject::updateMVP()
+{
+	if (HasMvpMatrix()) {
+		if (!rc->mvpComputed) {
+			rc->mvpMatrix = rc->projection * rc->modelview;
+			rc->mvpComputed = true;
+		}
+		glUniformMatrix4fv(ptr->uniforms.mvpLoc, 1, GL_FALSE, rc->mvpMatrix.data);
+	}
+}
+
+void ProgramObject::updateNorm()
+{
+	if (HasNormalMatrix()) {
+		if (!rc->normComputed) {
+			rc->normalMatrix = rc->modelview.GetInverse().GetTranspose();
+			rc->normComputed = true;
+		}
+		glUniformMatrix4fv(ptr->uniforms.normLoc, 1, GL_FALSE, rc->normalMatrix.data);
+	}
+}
+
+void ProgramObject::updateMatrices()
+{
+	if (ptr->fUpdateMV) {
+		glUniformMatrix4fv(ptr->uniforms.mvLoc, 1, GL_FALSE, rc->modelview.data);
+		updateMVP();
+		updateNorm();
+		ptr->fUpdateMV = false;
+	}
+	if (ptr->fUpdateProj) {
+		glUniformMatrix4fv(ptr->uniforms.projLoc, 1, GL_FALSE, rc->projection.data);
+		updateMVP();
+		ptr->fUpdateProj = false;
+	}
+}
+
+void ProgramObject::Use()
+{
+	if (rc->curProgram != this) {
+		rc->curProgram = this;
+		glUseProgram(ptr->handle);
 	}
 }
 
@@ -149,33 +174,35 @@ bool ProgramObject::Link()
 	BindAttribLocation(AttribsLocations.Tangent, "Tangent");
 	BindAttribLocation(AttribsLocations.Binormal, "Binormal");
 
-	glLinkProgram(handle);
-	glGetProgramiv(handle, GL_LINK_STATUS, &isLinked);
-	glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &logLen);
+	glLinkProgram(ptr->handle);
+	glGetProgramiv(ptr->handle, GL_LINK_STATUS, &isLinked);
+	glGetProgramiv(ptr->handle, GL_INFO_LOG_LENGTH, &logLen);
 
 	if (logLen != 0)
 	{
 		GLchar *infoLog = new GLchar[logLen];
-		glGetProgramInfoLog(handle, logLen, &logLen, infoLog);
+		glGetProgramInfoLog(ptr->handle, logLen, &logLen, infoLog);
 		OutputDebugString(infoLog);
-		delete[] infoLog;
+		delete [] infoLog;
 	}
 
 	linked = isLinked == TRUE;
 	if (linked)
 	{
+		_PO_Shared::Uniforms &uniforms = ptr->uniforms;
 		uniforms.free();
-		glGetProgramiv(handle, GL_ACTIVE_UNIFORMS, &uniforms.count);
+		glGetProgramiv(ptr->handle, GL_ACTIVE_UNIFORMS, &uniforms.count);
 		if (uniforms.count != 0) {
 			int maxLen = 0;
-			glGetProgramiv(handle, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLen);
+			glGetProgramiv(ptr->handle, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLen);
+
 			uniforms.names = new char *[uniforms.count];
 			uniforms.types = new GLenum[uniforms.count];
 
 			GLint size = 0;
 			for (int i = 0; i < uniforms.count; i++) {
 				uniforms.names[i] = new char[maxLen];
-				glGetActiveUniform(handle, i, maxLen, NULL, &size, &uniforms.types[i], uniforms.names[i]);
+				glGetActiveUniform(ptr->handle, i, maxLen, NULL, &size, &uniforms.types[i], uniforms.names[i]);
 			}
 			uniforms.mvLoc = GetUniformLocation("ModelView");
 			uniforms.projLoc = GetUniformLocation("Projection");
@@ -188,42 +215,42 @@ bool ProgramObject::Link()
 }
 
 GLint ProgramObject::GetAttribLocation(const char *name) {
-	return glGetAttribLocation(handle, name);
+	return glGetAttribLocation(ptr->handle, name);
 }
 
 void ProgramObject::BindAttribLocation(GLuint index, const char *name) {
-	glBindAttribLocation(handle, index, name);
+	glBindAttribLocation(ptr->handle, index, name);
 }
 
 GLuint ProgramObject::GetUniformLocation(const char *name) {
-	return glGetUniformLocation(handle, name);
+	return glGetUniformLocation(ptr->handle, name);
 }
 
 void ProgramObject::ModelView(const Matrix44f &m) {
-	if (uniforms.mvLoc != -1) {
+	if (ptr->uniforms.mvLoc != -1) {
 		Use();
-		glUniformMatrix4fv(uniforms.mvLoc, 1, GL_FALSE, m.data);
+		glUniformMatrix4fv(ptr->uniforms.mvLoc, 1, GL_FALSE, m.data);
 	}
 }
 
 void ProgramObject::Projection(const Matrix44f &m) {
-	if (uniforms.projLoc != -1) {
+	if (ptr->uniforms.projLoc != -1) {
 		Use();
-		glUniformMatrix4fv(uniforms.projLoc, 1, GL_FALSE, m.data);
+		glUniformMatrix4fv(ptr->uniforms.projLoc, 1, GL_FALSE, m.data);
 	}
 }
 
 void ProgramObject::ModelViewProjection(const Matrix44f &m) {
-	if (uniforms.mvpLoc != -1) {
+	if (ptr->uniforms.mvpLoc != -1) {
 		Use();
-		glUniformMatrix4fv(uniforms.mvpLoc, 1, GL_FALSE, m.data);
+		glUniformMatrix4fv(ptr->uniforms.mvpLoc, 1, GL_FALSE, m.data);
 	}
 }
 
 void ProgramObject::NormalMatrix(const Matrix44f &m) {
-	if (uniforms.normLoc != -1) {
+	if (ptr->uniforms.normLoc != -1) {
 		Use();
-		glUniformMatrix4fv(uniforms.normLoc, 1, GL_FALSE, m.data);
+		glUniformMatrix4fv(ptr->uniforms.normLoc, 1, GL_FALSE, m.data);
 	}
 }
 
@@ -263,7 +290,7 @@ void ProgramObject::Uniform(const char *name, int count, const float *value) {
 	int i = lookup(name);
 	if (i != -1) {
 		Use();
-		GLenum t = uniforms.types[i];
+		GLenum t = ptr->uniforms.types[i];
 		if (is4(t)) glUniform4fv(i, count, value);
 		else if (is3(t)) glUniform3fv(i, count, value);
 		else if (is2(t)) glUniform2fv(i, count, value);
@@ -274,7 +301,7 @@ void ProgramObject::Uniform(const char *name, int count, const int *value) {
 	int i = lookup(name);
 	if (i != -1) {
 		Use();
-		GLenum t = uniforms.types[i];
+		GLenum t = ptr->uniforms.types[i];
 		if (is4(t)) glUniform4iv(i, count, value);
 		else if (is3(t)) glUniform3iv(i, count, value);
 		else if (is2(t)) glUniform2iv(i, count, value);
@@ -287,7 +314,7 @@ void ProgramObject::UniformMatrix(const char *name, int count, bool transpose, c
 	int i = lookup(name);
 	if (i != -1) {
 		Use();
-		GLenum t = uniforms.types[i];
+		GLenum t = ptr->uniforms.types[i];
 		if (t == GL_FLOAT_MAT4) glUniformMatrix4fv(i, count, transpose, v);
 		else if (t == GL_FLOAT_MAT3) glUniformMatrix3fv(i, count, transpose, v);
 		else glUniformMatrix2fv(i, count, transpose, v);

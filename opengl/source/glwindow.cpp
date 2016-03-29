@@ -5,7 +5,7 @@ GLWindow::GLWindow()
 {
 	m_hwnd = NULL;
 	m_hdc = NULL;
-	m_hrc = NULL;
+	m_rc = NULL;
 	bFullScreen = bDummy = false;
 }
 
@@ -20,9 +20,9 @@ GLWindow::~GLWindow()
 HWND GLWindow::CreateParam(LPCTSTR lpCaption, int x, int y, int width, int height,
 	DWORD dwStyle, DWORD dwExStyle, HWND hParent)
 {
-	static ATOM reg = GLWindow::_RegisterWindow(this);
+	static ATOM reg = GLWindow::registerWindow(this);
 
-	m_hwnd = ::CreateWindowEx(dwExStyle, MAKEINTATOM(reg), lpCaption,
+	m_hwnd = CreateWindowEx(dwExStyle, MAKEINTATOM(reg), lpCaption,
 		dwStyle|WS_CLIPCHILDREN|WS_CLIPSIBLINGS,
 		x, y, width, height, hParent, NULL, GetModuleHandle(NULL), this);
 
@@ -36,7 +36,7 @@ void GLWindow::CreateFullScreen(LPCTSTR lpCaption)
 	RECT screenRect = { };
 	GetClientRect(GetDesktopWindow(), &screenRect);
 
-	this->_ChangeDisplaySettings();
+	this->changeDisplaySettings();
 	this->CreateParam(lpCaption, 0, 0, screenRect.right, screenRect.bottom, WS_POPUP, WS_EX_TOPMOST);
 
 	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT =
@@ -69,99 +69,21 @@ GLWindowInfoStruct GLWindow::GetWindowInfo()
 	return wi;
 }
 
-PIXELFORMATDESCRIPTOR GLWindow::GetDCPixelFormat()
+GLRenderingContextParams GLWindow::GetRCParams()
 {
-	PIXELFORMATDESCRIPTOR pfd = { };
-	pfd.nSize = sizeof(pfd);
-	pfd.nVersion = 1;
-	pfd.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
-	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 32;
-	pfd.cDepthBits = 24;
-	return pfd;
+	GLRenderingContextParams params = { };
+	params.glrcFlags = GLRC_COMPATIBILITY_PROFILE|GLRC_MSAA;
+	params.msaaNumberOfSamples = 4;
+	return params;
 }
 
-bool GLWindow::_CreateCompabilityContext()
-{
-	PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB =
-		(PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-
-	if (wglCreateContextAttribsARB != NULL)
-	{
-		int attribs[] = {
-			WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
-			0
-		};
-		m_hrc = wglCreateContextAttribsARB(m_hdc, NULL, attribs);
-		if (m_hrc) return true;
-	}
-	return false;
-}
-
-void GLWindow::_InitRC()
+void GLWindow::initRC()
 {
 	m_hdc = GetDC(m_hwnd);
-	PIXELFORMATDESCRIPTOR pfd = this->GetDCPixelFormat();
-
-	GLWindow tmpWindow;
-	tmpWindow.bDummy = true;
-	tmpWindow.CreateParam("");
-
-	HDC hTempDC = GetDC(tmpWindow.m_hwnd);
-	int iPixelFormat = ChoosePixelFormat(hTempDC, &pfd);
-	SetPixelFormat(hTempDC, iPixelFormat, &pfd);
-
-	HGLRC hTempRC = wglCreateContext(hTempDC);
-	wglMakeCurrent(hTempDC, hTempRC);
-
-	PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB =
-		(PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
-
-	bool useMSAA = wglChoosePixelFormatARB != NULL;
-	if (useMSAA)
-	{
-		int attrs[] = {
-			WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-			WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-			WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-			WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-			WGL_COLOR_BITS_ARB, 32,
-			WGL_DEPTH_BITS_ARB, 24,
-			WGL_STENCIL_BITS_ARB, 8,
-			WGL_SAMPLE_BUFFERS_ARB, 1,
-			WGL_SAMPLES_ARB, 4,
-			0
-		};
-
-		int iPixelFormatMSAA = 0;
-		UINT numFormats = 0;
-		BOOL valid = wglChoosePixelFormatARB(m_hdc, attrs, NULL, 1, &iPixelFormatMSAA, &numFormats);
-		if (valid && numFormats != 0)
-		{
-			SetPixelFormat(m_hdc, iPixelFormatMSAA, &pfd);
-			if (!_CreateCompabilityContext()) {
-				m_hrc = wglCreateContext(m_hdc);
-			}
-		}
-		else useMSAA = false;
-	}
-
-	if (!useMSAA)
-	{
-		int iPixelFormat = ChoosePixelFormat(m_hdc, &pfd);
-		SetPixelFormat(m_hdc, iPixelFormat, &pfd);
-
-		if (!_CreateCompabilityContext()) {
-			m_hrc = wglCreateContext(m_hdc);
-		}
-	}
-
-	wglMakeCurrent(m_hdc, m_hrc);
-	wglDeleteContext(hTempRC);
-	ReleaseDC(tmpWindow.m_hwnd, hTempDC);
+	m_rc = new GLRenderingContext(m_hdc, &GetRCParams());
 }
 
-void GLWindow::_ChangeDisplaySettings()
+void GLWindow::changeDisplaySettings()
 {
 	RECT screenRect = { };
 	GetClientRect(GetDesktopWindow(), &screenRect);
@@ -174,14 +96,14 @@ void GLWindow::_ChangeDisplaySettings()
 	ChangeDisplaySettings(&deviceMode, CDS_FULLSCREEN);
 }
 
-ATOM GLWindow::_RegisterWindow(GLWindow *pThis)
+ATOM GLWindow::registerWindow(GLWindow *pThis)
 {
 	WNDCLASSEX wc = { };
 	GLWindowInfoStruct wi = pThis->GetWindowInfo();
 
 	wc.cbSize = sizeof(wc);
 	wc.style = CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS|CS_OWNDC;
-	wc.lpfnWndProc = GLWindow::_WndProc;
+	wc.lpfnWndProc = GLWindow::wndProc;
 	wc.hInstance = GetModuleHandle(NULL);
 	wc.hIcon = wi.hIcon;
 	wc.hCursor = wi.hCursor;
@@ -193,7 +115,7 @@ ATOM GLWindow::_RegisterWindow(GLWindow *pThis)
 	return RegisterClassEx(&wc);
 }
 
-LRESULT CALLBACK GLWindow::_WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK GLWindow::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	GLWindow *pThis = NULL;
 
@@ -211,13 +133,13 @@ LRESULT CALLBACK GLWindow::_WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 		
 	if (pThis) {
-		return pThis->GLWindow::_HandleMessage(uMsg, wParam, lParam);
+		return pThis->GLWindow::handleMessage(uMsg, wParam, lParam);
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-HRESULT GLWindow::_HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
+HRESULT GLWindow::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (bDummy)
 		return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
@@ -228,7 +150,7 @@ HRESULT GLWindow::_HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch(uMsg)
 	{
 	case WM_CREATE:
-		_InitRC();
+		initRC();
 		OnCreate();
 		return 0;
 	case WM_PAINT:
@@ -300,14 +222,13 @@ HRESULT GLWindow::_HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 			}
 		} else {
 			SetFocus(m_hwnd);
-			if (bFullScreen) _ChangeDisplaySettings();
+			if (bFullScreen) changeDisplaySettings();
 		}
 		return 0;
 	}
 	case WM_DESTROY:
 		OnDestroy();
-		wglMakeCurrent(m_hdc, NULL);
-		wglDeleteContext(m_hrc);
+		delete m_rc;
 		ReleaseDC(m_hwnd, m_hdc);
 		return 0;
 	}

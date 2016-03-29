@@ -2,7 +2,8 @@
 #include "common.h"
 
 Quaternion::Quaternion() {
-	x = y = z = 0.0f; w = 1.0f;
+	x = y = z = 0.0f;
+	w = 1.0f;
 }
 
 Quaternion::Quaternion(const Vector3f &axis, float angleInDegrees)
@@ -35,7 +36,9 @@ float Quaternion::Angle() const {
 }
 
 Vector3f Quaternion::Axis() const {
-	return ::Normalize(Vector3f(x, y, z));
+	Vector3f axis(x, y, z);
+	axis.Normalize();
+	return axis;
 }
 
 Quaternion Quaternion::GetConjugate() const {

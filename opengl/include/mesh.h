@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "common.h"
-#include "vertexbuffer.h"
 #include "texture.h"
+#include "glcontext.h"
+#include "vertexbuffer.h"
 #include "shader.h"
 
 using namespace std;
@@ -16,7 +16,11 @@ using namespace std;
 class Mesh
 {
 public:
-	Mesh();
+	Mesh(GLRenderingContext *rc);
+	Mesh(const Mesh &m);
+	~Mesh();
+
+	Mesh &operator=(const Mesh &m);
 
 	bool HasNormals() const { return hasNormals; }
 	bool HasTexCoords() const { return hasTexCoords; }
@@ -42,15 +46,19 @@ public:
 	VertexBuffer texCoords;
 	VertexBuffer tangents, binormals;
 private:
-	BaseTexture texture;
-	Texture2D normalMap, specularMap;
-	GLuint programId;
-	bool tangentsComputed;
+	GLRenderingContext *rc;
+	ProgramObject *program;
+	BaseTexture *texture;
+	Texture2D *normalMap, *specularMap;
 
+	bool tangentsComputed;
 	bool hasNormals;
 	bool hasTexCoords;
 	int verticesCount;
 	int indicesCount;
+
+	void clone(const Mesh &m);
+	void cleanup();
 
 	void read_num(const string &line, char &c, int &i, int &n) {
 		n = 0;

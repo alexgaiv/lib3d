@@ -1,9 +1,8 @@
 #include "viewer3d.h"
-#include "global.h"
 #include "transform.h"
 
-Viewer3D::Viewer3D()
-	: isConstSpeed(false), constSpeedValue(0.0f)
+Viewer3D::Viewer3D(GLRenderingContext *rc)
+	: rc(rc), isConstSpeed(false), constSpeedValue(0.0f)
 {
 	view.fw = view.fw = view.s = 1.0f;
 	view.w = view.h = 0.0f;
@@ -17,7 +16,7 @@ Matrix44f Viewer3D::GetViewMatrix() {
 }
 
 void Viewer3D::ApplyTransform() {
-	Global::MultModelView(GetViewMatrix());
+	rc->MultModelView(GetViewMatrix());
 }
 
 void Viewer3D::ResetView() {
@@ -83,7 +82,7 @@ void Viewer3D::SetOrtho(float left, float right, float bottom, float top,
 	view.fh = view.h / winHeight;
 	rot.translate = Vector3f(0);
 
-	Global::SetProjection(Ortho(left, right, bottom, top, zNear, zFar));
+	rc->SetProjection(Ortho(left, right, bottom, top, zNear, zFar));
 	changed = true;
 }
 
@@ -94,7 +93,7 @@ void Viewer3D::SetPerspective(float fovy, float zNear, float zFar,
 	view.h = tan(fovy * (float)M_PI / 360.0f) * zNear;
 	view.w = view.h * aspect;
 
-	Global::SetProjection(Frustum(-view.w, view.w, -view.h, view.h, zNear, zFar));
+	rc->SetProjection(Frustum(-view.w, view.w, -view.h, view.h, zNear, zFar));
 
 	view.w *= 2.0f; view.h *= 2.0f;
 	view.fw = view.w / winWidth;
@@ -124,7 +123,7 @@ void Viewer3D::calcMatr()
 {
 	qRotation.ToMatrix(rot);
 	rot.Scale(scale);
-	matr = Global::GetProjection() * rot;
+	matr = rc->GetProjection() * rot;
 	matr_inv = matr.GetInverse();
 	changed = false;
 }

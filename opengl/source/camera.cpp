@@ -1,6 +1,5 @@
 #include "camera.h"
 #include "quaternion.h"
-#include "global.h"
 
 Camera::Camera(CameraType type) : type(type) {
 	x.x = y.y = z.z = 1.0f;
@@ -22,8 +21,8 @@ Matrix44f Camera::GetViewMatrix()
 	return view;
 }
 
-void Camera::ApplyTransform() {
-	Global::MultModelView(GetViewMatrix());
+void Camera::ApplyTransform(GLRenderingContext *rc) {
+	rc->MultModelView(GetViewMatrix());
 }
 
 void Camera::MoveX(float step) {

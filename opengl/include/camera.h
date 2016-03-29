@@ -2,6 +2,7 @@
 #define _CAMERA_H_
 
 #include "datatypes.h"
+#include "glcontext.h"
 
 enum CameraType {
 	CAM_FREE = 1,
@@ -15,7 +16,7 @@ public:
 	Camera(CameraType type = CAM_LAND);
 
 	Matrix44f GetViewMatrix();
-	void ApplyTransform();
+	void ApplyTransform(GLRenderingContext *rc);
 
 	Vector3f GetPosition() { return t; }
 	void SetPosition(float x, float y, float z)

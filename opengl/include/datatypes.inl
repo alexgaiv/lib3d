@@ -567,18 +567,6 @@ Matrix44<T> &Matrix44<T>::operator*=(const Matrix44<T> &m) {
 	return *this = Matrix44<T>::Multiply(*this, m);
 }
 #pragma endregion
-#pragma region Color4
-
-template<class T>
-bool Color4<T>::operator==(const Color4<T> &c) const {
-	return CmpReal(r, c.r) && CmpReal(g, c.g) && CmpReal(b, c.b) && CmpReal(a, c.a);
-}
-
-template<class T>
-bool Color4<T>::operator!=(const Color4<T> &c) const {
-	return !operator==(c);
-}
-#pragma endregion
 #pragma region Color3
 
 template<class T>
@@ -590,6 +578,49 @@ template<class T>
 bool Color3<T>::operator!=(const Color3<T> &c) const {
 	return !operator==(c);
 }
-#pragma endregion
 
+template<class T>
+Color3<T> operator*(T scale, Color3<T> c) {
+	return Color3<T>(c.r*scale, c.g*scale, c.b*scale);
+}
+
+template<class T>
+Color3<T> Color3<T>::operator*(T scale) const {
+	return Color3<T>(r*scale, g*scale, b*scale);
+}
+
+template<class T>
+Color3<T> Color3<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Color3<T>(r*f, g*f, b*f);
+}
+#pragma endregion
+#pragma region Color4
+
+template<class T>
+bool Color4<T>::operator==(const Color4<T> &c) const {
+	return CmpReal(r, c.r) && CmpReal(g, c.g) && CmpReal(b, c.b) && CmpReal(a, c.a);
+}
+
+template<class T>
+bool Color4<T>::operator!=(const Color4<T> &c) const {
+	return !operator==(c);
+}
+
+template<class T>
+Color4<T> operator*(T scale, Color4<T> c) {
+	return Color4<T>(c.r*scale, c.g*scale, c.b*scale, c.a*scale);
+}
+
+template<class T>
+Color4<T> Color4<T>::operator*(T scale) const {
+	return Color4<T>(r*scale, g*scale, b*scale, c.a*scale);
+}
+
+template<class T>
+Color4<T> Color4<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Color4<T>(r*f, g*f, b*f, a*f);
+}
+#pragma endregion
 #endif // _DATATYPES_INL_

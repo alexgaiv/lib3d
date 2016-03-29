@@ -3,23 +3,75 @@
 
 #define TEX_ID_NONE GLuint(-2)
 
-Mesh::Mesh()
-  : texture(GL_TEXTURE_2D, GL_TEXTURE0, TEX_ID_NONE),
-	normalMap(GL_TEXTURE1, TEX_ID_NONE),
-	specularMap(GL_TEXTURE2, TEX_ID_NONE)
+Mesh::Mesh(GLRenderingContext *rc) :
+	rc(rc),
+	vertices(rc), indices(rc, GL_ELEMENT_ARRAY_BUFFER),
+	normals(rc), texCoords(rc),
+	tangents(rc), binormals(rc)
 {
-	programId = 0;
+	program = NULL;
+	texture = NULL;
+	normalMap = specularMap = NULL;
+
 	verticesCount = indicesCount = 0;
 	tangentsComputed = false;
-	indices.SetTarget(GL_ELEMENT_ARRAY_BUFFER);
+}
+
+Mesh::Mesh(const Mesh &m) :
+	vertices(m.vertices), indices(m.indices),
+	normals(m.normals), texCoords(m.texCoords),
+	tangents(m.tangents), binormals(m.binormals)
+{
+	clone(m);
+}
+
+Mesh::~Mesh() {
+	cleanup();
+}
+
+Mesh &Mesh::operator=(const Mesh &m) {
+	cleanup();
+	clone(m);
+
+	vertices = m.vertices;
+	indices = m.indices;
+	normals = m.normals;
+	texCoords = m.texCoords;
+	tangents = m.tangents;
+	binormals = m.binormals;
+
+	return *this;
+}
+
+void Mesh::clone(const Mesh &m)
+{
+	rc = m.rc;
+	program = m.program ? new ProgramObject(*m.program) : NULL;
+	texture = m.texture ? new BaseTexture(*m.texture) : NULL;
+	normalMap = m.normalMap ? new Texture2D(*m.normalMap) : NULL;
+	specularMap = m.specularMap ? new Texture2D(*m.specularMap) : NULL;
+	
+	tangentsComputed = m.tangentsComputed;
+	hasNormals = m.hasNormals;
+	hasTexCoords = m.hasTexCoords;
+	verticesCount = m.verticesCount;
+	indicesCount = m.indicesCount;
+}
+
+void Mesh::cleanup()
+{
+	delete program;
+	delete texture;
+	delete normalMap;
+	delete specularMap;
 }
 
 void Mesh::BindTexture(const BaseTexture &texture) {
-	this->texture = texture;
+	this->texture = new BaseTexture(texture);
 }
 
 void Mesh::BindNormalMap(const Texture2D &normalMap) {
-	this->normalMap = normalMap;
+	this->normalMap = new Texture2D(normalMap);
 	if (!tangentsComputed) {
 		RecalcTangents();
 		tangentsComputed = true;
@@ -27,11 +79,12 @@ void Mesh::BindNormalMap(const Texture2D &normalMap) {
 }
 
 void Mesh::BindSpecularMap(const Texture2D &specularMap) {
-	this->specularMap = specularMap;
+	this->specularMap = new Texture2D(specularMap);
 }
 
 void Mesh::BindShader(const ProgramObject &program) {
-	this->programId = program.Handle();
+	delete this->program;
+	this->program = new ProgramObject(program);
 }
 
 void Mesh::RecalcTangents()
@@ -85,20 +138,16 @@ void Mesh::RecalcTangents()
 
 void Mesh::Draw(int first, int count)
 {
-	if (texture.GetId() != TEX_ID_NONE)
-		texture.Bind();
-	if (specularMap.GetId() != TEX_ID_NONE)
-		specularMap.Bind();
-	if (normalMap.GetId() != TEX_ID_NONE) {
+	if (program) program->Use();
+	if (texture) texture->Bind();
+	if (specularMap) specularMap->Bind();
+	if (normalMap) {
+		normalMap->Bind();
 		glEnableVertexAttribArray(AttribsLocations.Tangent);
 		glEnableVertexAttribArray(AttribsLocations.Binormal);
 		tangents.AttribPointer(AttribsLocations.Tangent, 3, GL_FLOAT);
 		binormals.AttribPointer(AttribsLocations.Binormal, 3, GL_FLOAT);
-		normalMap.Bind();
 	}
-
-	if (programId && programId != Global::curProgram)
-		glUseProgram(programId);
 
 	glEnableVertexAttribArray(AttribsLocations.Vertex);
 	vertices.AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
@@ -113,13 +162,12 @@ void Mesh::Draw(int first, int count)
 		texCoords.AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
 	}
 
-	indices.Bind();
-	glDrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, (void *)first);
+	indices.DrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, first);
 
 	glDisableVertexAttribArray(AttribsLocations.Vertex);
 	glDisableVertexAttribArray(AttribsLocations.Normal);
 	glDisableVertexAttribArray(AttribsLocations.TexCoord);
-	if (normalMap.GetId() != TEX_ID_NONE) {
+	if (normalMap) {
 		glDisableVertexAttribArray(AttribsLocations.Tangent);
 		glDisableVertexAttribArray(AttribsLocations.Binormal);
 	}
@@ -127,27 +175,22 @@ void Mesh::Draw(int first, int count)
 
 void Mesh::DrawFixed(int first, int count)
 {
-	if (texture.GetId() != GLuint(-2))
-		texture.Bind();
+	if (texture) texture->Bind();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	vertices.Bind();
-	glVertexPointer(3, GL_FLOAT, 0, 0);
+	vertices.VertexPointer(3, GL_FLOAT, 0);
 
 	if (hasNormals) {
 		glEnableClientState(GL_NORMAL_ARRAY);
-		normals.Bind();
-		glNormalPointer(GL_FLOAT, 0, 0);
+		normals.NormalPointer(GL_FLOAT, 0);
 	}
 
 	if (hasTexCoords) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		texCoords.Bind();
-		glTexCoordPointer(2, GL_FLOAT, 0, 0);
+		texCoords.TexCoordPointer(2, GL_FLOAT, 0);
 	}
 
-	indices.Bind();
-	glDrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, (void *)first);
+	indices.DrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, first);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);

@@ -1,6 +1,7 @@
 #ifndef _SKYBOX_H_
 #define _SKYBOX_H_
 
+#include "glcontext.h"
 #include "vertexbuffer.h"
 #include "texture.h"
 #include "shader.h"
@@ -8,20 +9,18 @@
 class Skybox
 {
 public:
-	Skybox(const char **sides);
-	Skybox(const CubeTexture &tex);
-	~Skybox();
+	Skybox(GLRenderingContext *rc, const char **sides);
+	Skybox(GLRenderingContext *rc, const CubeTexture &tex);
 
 	CubeTexture GetTexture() { return tex; }
 	void Draw();
 private:
-	static float vertsData[];
-	static char *source[2];
-	VertexBuffer vertices;
-	ProgramObject prog;
+	GLRenderingContext *rc;
+	VertexBuffer *vertices;
+	ProgramObject *prog;
 	CubeTexture tex;
 
-	void _init();
+	void init();
 };
 
 #endif // _SKYBOX_H_

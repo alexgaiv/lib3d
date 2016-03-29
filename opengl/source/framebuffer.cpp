@@ -22,11 +22,7 @@ void Renderbuffer::AllocateMultisampleStorage(GLsizei samples,
 
 Framebuffer::Framebuffer(GLenum target) {
 	this->target = target;
-	glGenFramebuffers(1, &id);
-}
-
-Framebuffer::~Framebuffer() {
-	glDeleteFramebuffers(1, &id);
+	glGenFramebuffers(1, &ptr->id);
 }
 
 void Framebuffer::AttachTexture(GLenum attachment, const BaseTexture &texture, GLint level)
