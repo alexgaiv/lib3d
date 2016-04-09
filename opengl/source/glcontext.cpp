@@ -33,7 +33,7 @@ GLRenderingContext::GLRenderingContext(HDC hdc,
 	{
 		GLWindow tmpWindow;
 		tmpWindow.bDummy = true;
-		tmpWindow.CreateParam("");
+		tmpWindow.Create("");
 
 		HDC hTempDC = GetDC(tmpWindow.m_hwnd);
 		int iPixelFormat = ChoosePixelFormat(hTempDC, &pfd);

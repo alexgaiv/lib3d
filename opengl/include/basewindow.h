@@ -3,6 +3,7 @@
 
 #include <Windows.h>
 #include <strsafe.h>
+#include "sharedptr.h"
 
 #define BEGIN_MSG_MAP protected: LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {\
 	switch(uMsg) {
@@ -37,7 +38,6 @@ class BaseWindow
 {
 public:
 	BaseWindow() : m_hwnd(NULL) { }
-	virtual ~BaseWindow();
 
 	BOOL Create(
 		LPCTSTR lpWindowName,
@@ -51,6 +51,7 @@ public:
 		HWND hWndParent = NULL);
 	
 	void Show(int nCmdShow) { ShowWindow(m_hwnd, nCmdShow); }
+	void Destroy() { DestroyWindow(m_hwnd); }
 	void SetChildrenFont(HFONT hFont);
 	void MainLoop();
 
@@ -62,9 +63,19 @@ protected:
 	virtual WindowInfoStruct GetWindowInfo();
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
-	static ATOM _RegisterWindow(BaseWindow *pThis);
-	static BOOL CALLBACK _SetFontProc(HWND hwnd, LPARAM hFont);
-	static LRESULT CALLBACK _WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	struct Shared
+	{
+		HWND hwnd;
+		ATOM classAtom;
+		Shared() : hwnd(NULL), classAtom(0) { }
+		~Shared();
+	};
+
+	my_shared_ptr<Shared> ptr;
+
+	static ATOM registerWindow(BaseWindow *pThis);
+	static BOOL CALLBACK setFontProc(HWND hwnd, LPARAM hFont);
+	static LRESULT CALLBACK wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 
 #endif // _BASE_WINDOW_H_

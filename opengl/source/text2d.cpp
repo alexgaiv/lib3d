@@ -29,7 +29,7 @@ Font2D::Shared::~Shared()
 
 void Font2D::Shared::load(const char *filename)
 {
-	ifstream file("textures/font.fnt");
+	ifstream file(filename);
 	if (!file) return;
 
 	int curCharset = 0;

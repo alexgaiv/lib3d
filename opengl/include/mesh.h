@@ -45,6 +45,11 @@ public:
 	VertexBuffer normals;
 	VertexBuffer texCoords;
 	VertexBuffer tangents, binormals;
+
+	bool hasNormals;
+	bool hasTexCoords;
+	int verticesCount;
+	int indicesCount;
 private:
 	GLRenderingContext *rc;
 	ProgramObject *program;
@@ -52,10 +57,6 @@ private:
 	Texture2D *normalMap, *specularMap;
 
 	bool tangentsComputed;
-	bool hasNormals;
-	bool hasTexCoords;
-	int verticesCount;
-	int indicesCount;
 
 	void clone(const Mesh &m);
 	void cleanup();

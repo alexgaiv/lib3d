@@ -2,18 +2,9 @@
 #define _GLWINDOW_H_
 
 #include "common.h"
+#include "basewindow.h"
 #include "glcontext.h"
 #include <strsafe.h>
-
-struct GLWindowInfoStruct
-{
-	HCURSOR hCursor;
-	HICON hIcon;
-	HICON hIconSm;
-	HBRUSH hbrBackground;
-	LPCTSTR lpszMenuName;
-	LPCTSTR lpszClassName;
-};
 
 enum MouseButton { NONE, LBUTTON, MBUTTON, RBUTTON };
 
@@ -27,17 +18,18 @@ enum KeyModifiers
 	KM_ANY_BUTTON = MK_LBUTTON|MK_MBUTTON|MK_RBUTTON
 };
 
-class GLWindow
+class GLWindow : public BaseWindow
 {
 public:
-	HWND m_hwnd;
 	HDC m_hdc;
 	GLRenderingContext *m_rc;
 
 	GLWindow();
-	virtual ~GLWindow();
 
-	HWND CreateParam(
+	bool IsFullscreen() const { return bFullScreen; }
+	bool IsVsyncEnabled() const { return bVsyinc; }
+
+	HWND Create(
 		LPCTSTR lpCaption,
 		int x = CW_USEDEFAULT,
 		int y = CW_USEDEFAULT,
@@ -49,21 +41,17 @@ public:
 
 	void CreateFullScreen(LPCTSTR lpCaption);
 
-	void Destroy() { DestroyWindow(m_hwnd); }
 	void Show(int nCmdShow) {
 		ShowWindow(m_hwnd, (bFullScreen && nCmdShow == SW_MAXIMIZE) ? SW_SHOW : nCmdShow);
 	}
 
-	void RedrawWindow() {
+	void Redraw() {
 		OnDisplay();
 		SwapBuffers(m_hdc);
 	}
 	
-	void MainLoop();
 protected:
-	virtual GLWindowInfoStruct GetWindowInfo();
 	virtual GLRenderingContextParams GetRCParams();
-
 	virtual void OnCreate() { }
 	virtual void OnDisplay() { }
 	virtual void OnSize(int w, int h) { }
@@ -82,12 +70,10 @@ private:
 	friend class GLRenderingContext;
 
 	bool bFullScreen;
+	bool bVsyinc;
 	bool bDummy;
 	
-	static ATOM registerWindow(GLWindow *pThis);
-	static LRESULT CALLBACK wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-	HRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+	HRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void initRC();
 	void changeDisplaySettings();
 };

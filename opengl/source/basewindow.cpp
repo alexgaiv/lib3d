@@ -1,25 +1,30 @@
 #include "BaseWindow.h"
 
-BaseWindow::~BaseWindow()
-{
-	if (IsWindow(m_hwnd)) {
-		SetWindowLongPtr(m_hwnd, GWLP_USERDATA, 0);
-		DestroyWindow(m_hwnd);
+BaseWindow::Shared::~Shared() {
+	if (IsWindow(hwnd)) {
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
+		DestroyWindow(hwnd);
+		UnregisterClass(MAKEINTATOM(classAtom), GetModuleHandle(NULL));
 	}
 }
 
 BOOL BaseWindow::Create(LPCTSTR lpWindowName, int x, int y, int width, int height,
 	DWORD dwStyle, DWORD dwExStyle, HMENU hMenu, HWND hWndParent)
 {
-	static ATOM reg = this->_RegisterWindow(this);
+	ATOM classAtom = registerWindow(this);
 
-	m_hwnd = CreateWindowEx(dwExStyle, MAKEINTATOM(reg), lpWindowName, dwStyle,
+	m_hwnd = CreateWindowEx(dwExStyle, MAKEINTATOM(classAtom), lpWindowName, dwStyle,
 		x, y, width, height, hWndParent, hMenu, GetModuleHandle(NULL), this);
+
+	ptr = my_shared_ptr<Shared>(new Shared);
+	ptr->hwnd = m_hwnd;
+	ptr->classAtom = classAtom;
+
 	return m_hwnd ? TRUE : FALSE;
 }
 
 void BaseWindow::SetChildrenFont(HFONT hFont) {
-	EnumChildWindows(m_hwnd, _SetFontProc, (LPARAM)hFont);
+	EnumChildWindows(m_hwnd, setFontProc, (LPARAM)hFont);
 }
 
 void BaseWindow::MainLoop()
@@ -35,7 +40,7 @@ WindowInfoStruct BaseWindow::GetWindowInfo()
 {
 	TCHAR className[20] = TEXT("clsname:");
 	StringCchPrintf(className+8, 10, TEXT("%d"), (int)this);
-
+	
 	WindowInfoStruct wi = { };
 	wi.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wi.hIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -52,14 +57,14 @@ LRESULT BaseWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
 }
 
-ATOM BaseWindow::_RegisterWindow(BaseWindow *pThis)
+ATOM BaseWindow::registerWindow(BaseWindow *pThis)
 {
 	WNDCLASSEX wc = { };
 	WindowInfoStruct wi = pThis->GetWindowInfo();
 
 	wc.cbSize = sizeof(wc);
 	wc.style = wi.style;
-	wc.lpfnWndProc = BaseWindow::_WndProc;
+	wc.lpfnWndProc = BaseWindow::wndProc;
 	wc.cbClsExtra = wi.cbClsExtra;
 	wc.cbWndExtra = wi.cbWndExtra;
 	wc.hInstance = GetModuleHandle(NULL);
@@ -72,12 +77,12 @@ ATOM BaseWindow::_RegisterWindow(BaseWindow *pThis)
 	return RegisterClassEx(&wc);
 }
 
-BOOL CALLBACK BaseWindow::_SetFontProc(HWND hwnd, LPARAM hFont) {
+BOOL CALLBACK BaseWindow::setFontProc(HWND hwnd, LPARAM hFont) {
 	SendMessage(hwnd, WM_SETFONT, hFont, TRUE);
 	return TRUE;
 }
 
-LRESULT CALLBACK BaseWindow::_WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK BaseWindow::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	BaseWindow *pThis = NULL;
 

@@ -315,6 +315,11 @@ typedef Color3<unsigned char> Color3b;
 typedef Color4<unsigned char> Color4b;
 
 template<class T>
+T Dot(Vector2<T> v1, Vector2<T> v2) {
+	return v1.x*v2.x + v1.y*v2.y;
+}
+
+template<class T>
 T Dot(Vector3<T> v1, Vector3<T> v2) {
 	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
 }
@@ -330,6 +335,12 @@ Vector3<T> Cross(Vector3<T> v1, Vector3<T> v2) {
 		v1.y*v2.z - v1.z*v2.y,
 		v1.z*v2.x - v1.x*v2.z,
 		v1.x*v2.y - v1.y*v2.x);
+}
+
+template<class T>
+Vector2<T> Normalize(Vector2<T> v) {
+	T f = T(1) / v.Length();
+	return Vector2<T>(v.x*f, v.y*f);
 }
 
 template<class T>

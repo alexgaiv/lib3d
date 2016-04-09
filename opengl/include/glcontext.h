@@ -59,8 +59,11 @@ public:
 	void SetProjection(const Matrix44f &mat);
 	void MultModelView(const Matrix44f &mat);
 	void MultProjection(const Matrix44f &mat);
+
 	Matrix44f GetModelView() const { return modelview; }
 	Matrix44f GetProjection() const { return projection; }
+	const Matrix44f &GetModelViewRef() const { return modelview; }
+	const Matrix44f &GetProjectionRef() const { return projection; }
 
 	void PushModelView()  { mvStack.push(modelview); }
 	void PopModelView()   { SetModelView(mvStack.top()); mvStack.pop(); }
