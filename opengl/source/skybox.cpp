@@ -16,7 +16,7 @@ private:
 
 void GLRC_SkyboxModule::Initialize(GLRenderingContext *rc)
 {
-	vertices = new VertexBuffer(rc);
+	vertices = new VertexBuffer(rc, GL_ARRAY_BUFFER);
 	prog = new ProgramObject(rc);
 
 	vertices->SetData(sizeof(vertsData), vertsData, GL_STATIC_DRAW);

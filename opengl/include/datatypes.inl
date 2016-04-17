@@ -323,6 +323,13 @@ void Matrix33<T>::Scale(T factor) {
 }
 
 template<class T>
+void Matrix33<T>::Scale(const Vector3<T> &factor) {
+	xAxis *= factor.x;
+	yAxis *= factor.y;
+	zAxis *= factor.z;
+}
+
+template<class T>
 Matrix33<T> Matrix33<T>::GetTranspose() const
 {
 	Matrix33<T> m1;
@@ -450,6 +457,13 @@ void Matrix44<T>::Scale(T factor) {
 	xAxis *= factor;
 	yAxis *= factor;
 	zAxis *= factor;
+}
+
+template<class T>
+void Matrix44<T>::Scale(const Vector3<T> &factor) {
+	xAxis *= factor.x;
+	yAxis *= factor.y;
+	zAxis *= factor.z;
 }
 
 template<class T>

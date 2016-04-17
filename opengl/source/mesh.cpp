@@ -3,25 +3,19 @@
 
 #define TEX_ID_NONE GLuint(-2)
 
-Mesh::Mesh(GLRenderingContext *rc) :
-	rc(rc),
-	vertices(rc), indices(rc, GL_ELEMENT_ARRAY_BUFFER),
-	normals(rc), texCoords(rc),
-	tangents(rc), binormals(rc)
+Mesh::Mesh(GLRenderingContext *rc) : rc(rc)
 {
-	program = NULL;
+	firstIndex = 0;
+	indicesCount = -1;
+
+	vertices = indices = normals = texCoords = NULL;
+	tangents = binormals = NULL;
 	texture = NULL;
 	normalMap = specularMap = NULL;
-
-	verticesCount = indicesCount = 0;
 	tangentsComputed = false;
 }
 
-Mesh::Mesh(const Mesh &m) :
-	vertices(m.vertices), indices(m.indices),
-	normals(m.normals), texCoords(m.texCoords),
-	tangents(m.tangents), binormals(m.binormals)
-{
+Mesh::Mesh(const Mesh &m) {
 	clone(m);
 }
 
@@ -32,45 +26,52 @@ Mesh::~Mesh() {
 Mesh &Mesh::operator=(const Mesh &m) {
 	cleanup();
 	clone(m);
-
-	vertices = m.vertices;
-	indices = m.indices;
-	normals = m.normals;
-	texCoords = m.texCoords;
-	tangents = m.tangents;
-	binormals = m.binormals;
-
 	return *this;
 }
 
 void Mesh::clone(const Mesh &m)
 {
 	rc = m.rc;
-	program = m.program ? new ProgramObject(*m.program) : NULL;
+
+	firstIndex = m.firstIndex;
+	indicesCount = m.indicesCount;
+
+	vertices = m.vertices ? new VertexBuffer(*m.vertices) : NULL;
+	indices = m.indices ? new VertexBuffer(*m.indices) : NULL;
+	normals = m.normals ? new VertexBuffer(*m.normals) : NULL;
+	texCoords = m.texCoords  ? new VertexBuffer(*m.texCoords) : NULL;
+	tangents = m.tangents ? new VertexBuffer(*m.tangents) : NULL;
+	binormals = m.binormals ? new VertexBuffer(*m.binormals) : NULL;
+
 	texture = m.texture ? new BaseTexture(*m.texture) : NULL;
 	normalMap = m.normalMap ? new Texture2D(*m.normalMap) : NULL;
 	specularMap = m.specularMap ? new Texture2D(*m.specularMap) : NULL;
-	
+
 	tangentsComputed = m.tangentsComputed;
-	hasNormals = m.hasNormals;
-	hasTexCoords = m.hasTexCoords;
-	verticesCount = m.verticesCount;
-	indicesCount = m.indicesCount;
+	boundingBox = m.boundingBox;
+	boundingSphere = m.boundingSphere;
 }
 
 void Mesh::cleanup()
 {
-	delete program;
+	delete vertices;
+	delete indices;
+	delete normals;
+	delete texCoords;
+	delete tangents;
+	delete binormals;
 	delete texture;
 	delete normalMap;
 	delete specularMap;
 }
 
 void Mesh::BindTexture(const BaseTexture &texture) {
+	delete this->texture;
 	this->texture = new BaseTexture(texture);
 }
 
 void Mesh::BindNormalMap(const Texture2D &normalMap) {
+	delete this->normalMap;
 	this->normalMap = new Texture2D(normalMap);
 	if (!tangentsComputed) {
 		RecalcTangents();
@@ -79,22 +80,20 @@ void Mesh::BindNormalMap(const Texture2D &normalMap) {
 }
 
 void Mesh::BindSpecularMap(const Texture2D &specularMap) {
+	delete this->specularMap;
 	this->specularMap = new Texture2D(specularMap);
-}
-
-void Mesh::BindShader(const ProgramObject &program) {
-	delete this->program;
-	this->program = new ProgramObject(program);
 }
 
 void Mesh::RecalcTangents()
 {
 	if (!HasNormals() || !HasTexCoords()) return;
 
-	Vector3f *verts = (Vector3f *)vertices.Map(GL_READ_ONLY);
-	Vector2f *texs = (Vector2f *)texCoords.Map(GL_READ_ONLY);
-	int *inds = (int *)indices.Map(GL_READ_ONLY);
+	Vector3f *verts = (Vector3f *)vertices->Map(GL_READ_ONLY);
+	Vector2f *texs = (Vector2f *)texCoords->Map(GL_READ_ONLY);
+	int *inds = (int *)indices->Map(GL_READ_ONLY);
 	
+	int verticesCount = GetVerticesCount();
+	int indicesCount = GetIndicesCount();
 	Vector3f *ts = new Vector3f[verticesCount];
 	Vector3f *bs = new Vector3f[verticesCount];
 
@@ -125,44 +124,45 @@ void Mesh::RecalcTangents()
 		bs[i1] = bs[i2] = bs[i3] = binormal;
 	}
 	
-	tangents.SetData(verticesCount*sizeof(Vector3f), ts, GL_STATIC_DRAW);
-	binormals.SetData(verticesCount*sizeof(Vector3f), bs, GL_STATIC_DRAW);
+	if (!tangents) tangents = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+	if (!binormals) binormals = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+	tangents->SetData(verticesCount*sizeof(Vector3f), ts, GL_STATIC_DRAW);
+	binormals->SetData(verticesCount*sizeof(Vector3f), bs, GL_STATIC_DRAW);
 
 	delete [] ts;
 	delete [] bs;
 
-	vertices.Unmap();
-	texCoords.Unmap();
-	indices.Unmap();
+	vertices->Unmap();
+	texCoords->Unmap();
+	indices->Unmap();
 }
 
-void Mesh::Draw(int first, int count)
+void Mesh::Draw()
 {
-	if (program) program->Use();
 	if (texture) texture->Bind();
 	if (specularMap) specularMap->Bind();
 	if (normalMap) {
 		normalMap->Bind();
 		glEnableVertexAttribArray(AttribsLocations.Tangent);
 		glEnableVertexAttribArray(AttribsLocations.Binormal);
-		tangents.AttribPointer(AttribsLocations.Tangent, 3, GL_FLOAT);
-		binormals.AttribPointer(AttribsLocations.Binormal, 3, GL_FLOAT);
+		tangents->AttribPointer(AttribsLocations.Tangent, 3, GL_FLOAT);
+		binormals->AttribPointer(AttribsLocations.Binormal, 3, GL_FLOAT);
 	}
 
 	glEnableVertexAttribArray(AttribsLocations.Vertex);
-	vertices.AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
+	vertices->AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
 
-	if (hasNormals) {
+	if (HasNormals()) {
 		glEnableVertexAttribArray(AttribsLocations.Normal);
-		normals.AttribPointer(AttribsLocations.Normal, 3, GL_FLOAT);
+		normals->AttribPointer(AttribsLocations.Normal, 3, GL_FLOAT);
 	}
 
-	if (hasTexCoords) {
+	if (HasTexCoords()) {
 		glEnableVertexAttribArray(AttribsLocations.TexCoord);
-		texCoords.AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
+		texCoords->AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
 	}
 
-	indices.DrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, first);
+	indices->DrawElements(GL_TRIANGLES, GetIndicesCount(), GL_UNSIGNED_INT, firstIndex * sizeof(int));
 
 	glDisableVertexAttribArray(AttribsLocations.Vertex);
 	glDisableVertexAttribArray(AttribsLocations.Normal);
@@ -173,28 +173,77 @@ void Mesh::Draw(int first, int count)
 	}
 }
 
-void Mesh::DrawFixed(int first, int count)
+void Mesh::DrawInstanced(int instanceCount)
+{
+	if (texture) texture->Bind();
+	if (specularMap) specularMap->Bind();
+	if (normalMap) {
+		normalMap->Bind();
+		glEnableVertexAttribArray(AttribsLocations.Tangent);
+		glEnableVertexAttribArray(AttribsLocations.Binormal);
+		tangents->AttribPointer(AttribsLocations.Tangent, 3, GL_FLOAT);
+		binormals->AttribPointer(AttribsLocations.Binormal, 3, GL_FLOAT);
+	}
+
+	glEnableVertexAttribArray(AttribsLocations.Vertex);
+	vertices->AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
+
+	if (HasNormals()) {
+		glEnableVertexAttribArray(AttribsLocations.Normal);
+		normals->AttribPointer(AttribsLocations.Normal, 3, GL_FLOAT);
+	}
+
+	if (HasTexCoords()) {
+		glEnableVertexAttribArray(AttribsLocations.TexCoord);
+		texCoords->AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
+	}
+
+	indices->DrawElementsInstanced(GL_TRIANGLES, GetIndicesCount(),
+		GL_UNSIGNED_INT, instanceCount, firstIndex * sizeof(int));
+
+	glDisableVertexAttribArray(AttribsLocations.Vertex);
+	glDisableVertexAttribArray(AttribsLocations.Normal);
+	glDisableVertexAttribArray(AttribsLocations.TexCoord);
+	if (normalMap) {
+		glDisableVertexAttribArray(AttribsLocations.Tangent);
+		glDisableVertexAttribArray(AttribsLocations.Binormal);
+	}
+}
+
+void Mesh::DrawFixed()
 {
 	if (texture) texture->Bind();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	vertices.VertexPointer(3, GL_FLOAT, 0);
+	vertices->VertexPointer(3, GL_FLOAT, 0);
 
-	if (hasNormals) {
+	if (HasNormals()) {
 		glEnableClientState(GL_NORMAL_ARRAY);
-		normals.NormalPointer(GL_FLOAT, 0);
+		normals->NormalPointer(GL_FLOAT, 0);
 	}
 
-	if (hasTexCoords) {
+	if (HasTexCoords()) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		texCoords.TexCoordPointer(2, GL_FLOAT, 0);
+		texCoords->TexCoordPointer(2, GL_FLOAT, 0);
 	}
 
-	indices.DrawElements(GL_TRIANGLES, count == -1 ? indicesCount : count, GL_UNSIGNED_INT, first);
+	indices->DrawElements(GL_TRIANGLES, GetIndicesCount(), GL_UNSIGNED_INT, firstIndex);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+}
+
+void Mesh::read_num(const string &line, char &c, int &i, int &n) {
+	n = 0;
+	c = line[i++];
+	bool neg = c == '-';
+	if (neg) c = line[i++];
+	while (c != '/' && c != ' ' && c != 0) {
+		n = n*10 + c-'0';
+		c = line[i++];
+	}
+	if (neg) n = -n;
 }
 
 bool Mesh::LoadObj(const char *filename)
@@ -208,6 +257,9 @@ bool Mesh::LoadObj(const char *filename)
 	vector<Vector3f> verts, norms;
 	vector<Vector2f> texs;
 	vector<int> iverts, inorms, itexs;
+
+	Vector3f vmax, vmin;
+	bool first = true;
 
 	string line;
 	while (getline(file, line))
@@ -223,6 +275,20 @@ bool Mesh::LoadObj(const char *filename)
 		if (prefix == "v ") {
 			sscanf_s(line.c_str(), "%f %f %f", &v.x, &v.y, &v.z);
 			verts.push_back(v);
+
+			if (first) {
+				vmax = vmin = v;
+				first = false;
+			}
+			else {
+				if (v.x > vmax.x) vmax.x = v.x;
+				if (v.y > vmax.y) vmax.y = v.y;
+				if (v.z > vmax.z) vmax.z = v.z;
+
+				if (v.x < vmin.x) vmin.x = v.x;
+				if (v.y < vmin.y) vmin.y = v.y;
+				if (v.z < vmin.z) vmin.z = v.z;
+			}
 		}
 		else if (prefix == "vn") {
 			sscanf_s(line.c_str(), "%f %f %f", &v.x, &v.y, &v.z);
@@ -241,7 +307,7 @@ bool Mesh::LoadObj(const char *filename)
 
 			for (int k = 0; k < 3; k++) {
 				read_num(line, c, i, n);
-				iverts.push_back(n > 0 ? --n : vertsCount + n);
+				iverts.push_back(n > 0 ? n - 1 : vertsCount + n);
 
 				if (c == '/')
 				{
@@ -250,12 +316,12 @@ bool Mesh::LoadObj(const char *filename)
 					read_num(line, c, i, n);
 
 					if (skip)
-						inorms.push_back(n > 0 ? --n : vertsCount + n);
+						inorms.push_back(n > 0 ? n - 1 : vertsCount + n);
 					else {
-						itexs.push_back(n > 0 ? --n : vertsCount + n);
+						itexs.push_back(n > 0 ? n - 1 : vertsCount + n);
 						if (c == '/') {
 							read_num(line, c, i, n);
-							inorms.push_back(n > 0 ? --n : vertsCount + n);
+							inorms.push_back(n > 0 ? n - 1 : vertsCount + n);
 						}
 					}
 				}
@@ -263,10 +329,13 @@ bool Mesh::LoadObj(const char *filename)
 		}
 	}
 
-	verticesCount = verts.size();
-	indicesCount = iverts.size();
-	hasNormals = norms.size() != 0;
-	hasTexCoords = texs.size() != 0;
+	file.close();
+
+	int verticesCount = verts.size();
+	if (verticesCount == 0) return false;
+	this->indicesCount = iverts.size();
+	bool hasNormals = norms.size() != 0;
+	bool hasTexCoords = texs.size() != 0;
 
 	if (hasNormals || hasTexCoords)
 	{
@@ -320,16 +389,31 @@ bool Mesh::LoadObj(const char *filename)
 
 		verticesCount = verts.size();
 
-		if (hasNormals)
-			normals.SetData(norms_new.size()*sizeof(Vector3f), norms_new.data(), GL_STATIC_DRAW);
-		if (hasTexCoords)
-			texCoords.SetData(texs_new.size()*sizeof(Vector2f), texs_new.data(), GL_STATIC_DRAW);
+		if (hasNormals) {
+			if (!normals) normals = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+			normals->SetData(norms_new.size()*sizeof(Vector3f), norms_new.data(), GL_STATIC_DRAW);
+		}
+		if (hasTexCoords) {
+			if (!texCoords) texCoords = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+			texCoords->SetData(texs_new.size()*sizeof(Vector2f), texs_new.data(), GL_STATIC_DRAW);
+		}
 	}
 	
-	vertices.SetData(verticesCount*sizeof(Vector3f), verts.data(), GL_STATIC_DRAW);
-	indices.SetData(indicesCount*sizeof(int), iverts.data(), GL_STATIC_DRAW);
+	if (!vertices) vertices = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+	if (!indices) indices = new VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
+	vertices->SetData(verticesCount*sizeof(Vector3f), verts.data(), GL_STATIC_DRAW);
+	indices->SetData(indicesCount*sizeof(int), iverts.data(), GL_STATIC_DRAW);
 
-	file.close();
+	boundingBox.front = Plane(0, 0, 1, -vmax.z);
+	boundingBox.back = Plane(0, 0, -1, vmin.z);
+	boundingBox.top = Plane(0, 1, 0, -vmax.y);
+	boundingBox.bottom = Plane(0, -1, 0, vmin.y);
+	boundingBox.left = Plane(-1, 0, 0, vmin.x);
+	boundingBox.right = Plane(1, 0, 0, -vmax.x);
+
+	boundingSphere.center = (vmax + vmin) / 2;
+	boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
+	
 	return true;
 }
 
@@ -345,8 +429,12 @@ bool Mesh::LoadRaw(const char *filename)
 	int a = *(int *)signature;
 	if (*(int *)signature != 0x00574152) return false;
 
+	int verticesCount = 0;
+	bool hasNormals = false;
+	bool hasTexCoords = false;
+
 	ReadFile(hFile, &verticesCount, sizeof(int), &bytesRead, NULL);
-	ReadFile(hFile, &indicesCount, sizeof(int), &bytesRead, NULL);
+	ReadFile(hFile, &this->indicesCount, sizeof(int), &bytesRead, NULL);
 	ReadFile(hFile, &hasNormals, 1, &bytesRead, NULL);
 	ReadFile(hFile, &hasTexCoords, 1, &bytesRead, NULL);
 
@@ -356,8 +444,10 @@ bool Mesh::LoadRaw(const char *filename)
 	ReadFile(hFile, verts, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
 	ReadFile(hFile, indx, indicesCount*sizeof(UINT), &bytesRead, NULL);
 
-	vertices.SetData(verticesCount*sizeof(Vector3f), verts, GL_STATIC_DRAW);
-	indices.SetData(indicesCount*sizeof(UINT), indx, GL_STATIC_DRAW);
+	if (!vertices) vertices = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+	if (!indices) indices = new VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
+	vertices->SetData(verticesCount*sizeof(Vector3f), verts, GL_STATIC_DRAW);
+	indices->SetData(indicesCount*sizeof(UINT), indx, GL_STATIC_DRAW);
 
 	delete [] verts;
 	delete [] indx;
@@ -366,7 +456,8 @@ bool Mesh::LoadRaw(const char *filename)
 	{
 		Vector3f *norms = new Vector3f[verticesCount];
 		ReadFile(hFile, norms, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
-		normals.SetData(verticesCount*sizeof(Vector3f), norms, GL_STATIC_DRAW);
+		if (!normals) normals = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+		normals->SetData(verticesCount*sizeof(Vector3f), norms, GL_STATIC_DRAW);
 		delete [] norms;
 	}
 
@@ -374,7 +465,8 @@ bool Mesh::LoadRaw(const char *filename)
 	{
 		Vector2f *texs = new Vector2f[verticesCount];
 		ReadFile(hFile, texs, verticesCount*sizeof(Vector2f), &bytesRead, NULL);
-		texCoords.SetData(verticesCount*sizeof(Vector2f), texs, GL_STATIC_DRAW);
+		if (!texCoords) texCoords = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+		texCoords->SetData(verticesCount*sizeof(Vector2f), texs, GL_STATIC_DRAW);
 		delete [] texs;
 	}
 

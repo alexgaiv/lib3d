@@ -175,6 +175,7 @@ union Matrix33
 	template<class T2> explicit Matrix33(const Matrix44<T2> &m);
 
 	void Scale(T factor);
+	void Scale(const Vector3<T> &factor);
 	T Determinant() const;
 	Matrix33 GetInverse() const;
 	Matrix33 GetTranspose() const;
@@ -217,6 +218,7 @@ union Matrix44
 	template<class T2> explicit Matrix44(const Matrix44<T2> &m);
 
 	void Scale(T factor);
+	void Scale(const Vector3<T> &factor);
 	void SetRotation(const Matrix33<T> &m);
 
 	T Determinant() const;

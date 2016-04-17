@@ -178,7 +178,8 @@ void GLRC_Text2DModule::Destroy() {
 Text2D::Text2D(GLRenderingContext *rc, const Font2D &font) :
 	rc(rc),
 	font(font),
-	vertices(rc), texCoords(rc),
+	vertices(rc, GL_ARRAY_BUFFER),
+	texCoords(rc, GL_ARRAY_BUFFER),
 	numVerts(0)
 {
 	GLRC_Text2DModule *module = (GLRC_Text2DModule *)rc->GetModule("Text2D");
@@ -191,7 +192,8 @@ Text2D::Text2D(GLRenderingContext *rc, const Font2D &font) :
 
 Text2D::Text2D(const Text2D &t) :
 	font(t.font),
-	vertices(t.rc), texCoords(t.rc)
+	vertices(t.rc, GL_ARRAY_BUFFER),
+	texCoords(t.rc, GL_ARRAY_BUFFER)
 {
 	clone(t);
 }

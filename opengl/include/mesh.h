@@ -8,10 +8,62 @@
 
 #include "texture.h"
 #include "glcontext.h"
+#include "datatypes.h"
 #include "vertexbuffer.h"
 #include "shader.h"
+#include "geometry.h"
 
 using namespace std;
+
+class BoundingBox
+{
+public:
+	Plane front, back, top, bottom, left, right;
+
+	bool Intersects(const Ray &r)
+	{
+		Point3f p;
+		if (front.Intersects(r, p)) {
+			if (p.x > left.D && p.x < -right.D &&
+				p.y > bottom.D && p.y < -top.D) return true;
+		}
+		if (back.Intersects(r, p)) {
+			if (p.x > left.D && p.x < -right.D &&
+				p.y > bottom.D && p.y < -top.D) return true;
+		}
+		if (top.Intersects(r, p)) {
+			if (p.x > left.D && p.x < -right.D &&
+				p.z > back.D && p.z < -front.D) return true;
+		}
+		if (bottom.Intersects(r, p)) {
+			if (p.x > left.D && p.x < -right.D &&
+				p.z > back.D && p.z < -front.D) return true;
+		}
+		if (left.Intersects(r, p)) {
+			if (p.y > bottom.D && p.y < -top.D &&
+				p.z > back.D && p.z < -front.D) return true;
+		}
+		if (right.Intersects(r, p)) {
+			if (p.y > bottom.D && p.y < -top.D &&
+				p.z > back.D && p.z < -front.D) return true;
+		}
+
+		return false;
+	}
+};
+
+class Material
+{
+public:
+	Color3f ambient;
+	Color3f diffuse;
+	Color3f specular;
+	int specularIntensity;
+
+	Texture2D *diffuseMap;
+	Texture2D *normalMap;
+	Texture2D *specularMap;
+};
 
 class Mesh
 {
@@ -22,56 +74,48 @@ public:
 
 	Mesh &operator=(const Mesh &m);
 
-	bool HasNormals() const { return hasNormals; }
-	bool HasTexCoords() const { return hasTexCoords; }
-	int GetVerticesCount() const { return verticesCount; }
-	int GetIndicesCount() const { return indicesCount; }
-	int GetFaceCount() const { return indicesCount / 3; }
+	bool HasNormals() const { return normals != NULL; }
+	bool HasTexCoords() const { return texCoords != NULL; }
+	int GetVerticesCount() const { return vertices->GetSize() / sizeof(Vector3f); }
+	int GetIndicesCount() const { return indicesCount >= 0 ? indicesCount : indices->GetSize() / sizeof(int); }
+	int GetFaceCount() const { return GetIndicesCount() / 3; }
+
+	void SetFirstIndex(int firstIndex) { this->firstIndex = firstIndex; }
+	void SetIndicesCount(int indicesCount) { this->indicesCount = indicesCount; } // -1 to draw all
 
 	void BindTexture(const BaseTexture &texture);
 	void BindNormalMap(const Texture2D &normalMap);
-	void BindSpecularMap(const Texture2D &specMap);
-	void BindShader(const ProgramObject &program);
+	void BindSpecularMap(const Texture2D &specularMap);
 
 	void RecalcTangents();
 
-	void Draw(int firstIndex = 0, int numIndices = -1);
-	void DrawFixed(int firstIndex = 0, int numIndices = -1);
+	void Draw();
+	void DrawInstanced(int instanceCount);
+	void DrawFixed();
 	bool LoadObj(const char *filename);
 	bool LoadRaw(const char *filename);
 
-	VertexBuffer vertices;
-	VertexBuffer indices;
-	VertexBuffer normals;
-	VertexBuffer texCoords;
-	VertexBuffer tangents, binormals;
+	BoundingBox boundingBox;
+	Sphere boundingSphere;
 
-	bool hasNormals;
-	bool hasTexCoords;
-	int verticesCount;
-	int indicesCount;
+	VertexBuffer *vertices;
+	VertexBuffer *indices;
+	VertexBuffer *normals;
+	VertexBuffer *texCoords;
+	VertexBuffer *tangents, *binormals;
 private:
 	GLRenderingContext *rc;
-	ProgramObject *program;
 	BaseTexture *texture;
 	Texture2D *normalMap, *specularMap;
 
+	int firstIndex;
+	int indicesCount;
 	bool tangentsComputed;
 
 	void clone(const Mesh &m);
 	void cleanup();
 
-	void read_num(const string &line, char &c, int &i, int &n) {
-		n = 0;
-		c = line[i++];
-		bool neg = c == '-';
-		if (neg) c = line[i++];
-		while (c != '/' && c != ' ' && c != 0) {
-			n = n*10 + c-'0';
-			c = line[i++];
-		}
-		if (neg) n = -n;
-	}
+	void read_num(const string &line, char &c, int &i, int &n);
 };
 
 #endif // _MESH_H_
