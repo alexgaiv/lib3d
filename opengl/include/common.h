@@ -6,7 +6,6 @@
 #include <Windows.h>
 #include <gl/glew.h>
 #include <gl/gl.h>
-#include <gl/glu.h>
 #include <gl/glext.h>
 #include <gl/wglext.h>
 #include <math.h>
