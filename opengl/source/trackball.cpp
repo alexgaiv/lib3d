@@ -1,7 +1,7 @@
-#include "viewer3d.h"
+#include "trackball.h"
 #include "transform.h"
 
-Viewer3D::Viewer3D(GLRenderingContext *rc)
+TrackballCamera::TrackballCamera(GLRenderingContext *rc)
 	: rc(rc), isConstSpeed(false), constSpeedValue(0.0f)
 {
 	view.fw = view.fw = view.s = 1.0f;
@@ -9,17 +9,17 @@ Viewer3D::Viewer3D(GLRenderingContext *rc)
 	ResetView();
 }
 
-Matrix44f Viewer3D::GetViewMatrix() {
+Matrix44f TrackballCamera::GetViewMatrix() {
 	qRotation.ToMatrix(rot);
 	rot.Scale(scale);
 	return rot * trs;
 }
 
-void Viewer3D::ApplyTransform() {
+void TrackballCamera::ApplyTransform() {
 	rc->MultModelView(GetViewMatrix());
 }
 
-void Viewer3D::ResetView() {
+void TrackballCamera::ResetView() {
 	qRotation.LoadIdentity();
 	rot.SetRotation(Matrix33f::Identity());
 	trs.LoadIdentity();
@@ -27,23 +27,23 @@ void Viewer3D::ResetView() {
 	changed = true;
 }
 
-void Viewer3D::BeginPan(int winX, int winY) {
+void TrackballCamera::BeginPan(int winX, int winY) {
 	last = pos(trs.translate, winX, winY);
 }
 
-void Viewer3D::BeginRotate(int winX, int winY) {
+void TrackballCamera::BeginRotate(int winX, int winY) {
 	from.x = winX * view.fw - 1.0f;
 	from.y = winY * view.fh - 1.0f;
 }
 
-void Viewer3D::Pan(int winX, int winY)
+void TrackballCamera::Pan(int winX, int winY)
 {
 	Vector3f p = pos(trs.translate, winX, winY);
 	trs.translate += p - last;
 	last = p;
 }
 
-void Viewer3D::Rotate(int winX, int winY)
+void TrackballCamera::Rotate(int winX, int winY)
 {
 	to.x = winX * view.fw - 1.0f;
 	to.y = winY * view.fh - 1.0f;
@@ -63,17 +63,17 @@ void Viewer3D::Rotate(int winX, int winY)
 	changed = true;
 }
 
-void Viewer3D::Zoom(float scale) {
+void TrackballCamera::Zoom(float scale) {
 	this->scale *= scale;
 	changed = true;
 }
 
-void Viewer3D::SetScale(float scale) {
+void TrackballCamera::SetScale(float scale) {
 	this->scale = scale;
 	changed = true;
 }
 
-void Viewer3D::SetOrtho(float left, float right, float bottom, float top,
+void TrackballCamera::SetOrtho(float left, float right, float bottom, float top,
 	float zNear, float zFar, int winWidth, int winHeight)
 {
 	view.w = abs(right - left);
@@ -86,7 +86,7 @@ void Viewer3D::SetOrtho(float left, float right, float bottom, float top,
 	changed = true;
 }
 
-void Viewer3D::SetPerspective(float fovy, float zNear, float zFar,
+void TrackballCamera::SetPerspective(float fovy, float zNear, float zFar,
 	Point3f center, int winWidth, int winHeight)
 {
 	float aspect = (float)winWidth / (float)winHeight;
@@ -102,7 +102,7 @@ void Viewer3D::SetPerspective(float fovy, float zNear, float zFar,
 	changed = true;
 }
 
-Vector3f Viewer3D::pos(const Vector3f &p, int x, int y)
+Vector3f TrackballCamera::pos(const Vector3f &p, int x, int y)
 {
 	int viewport[4] = { };
 	glGetIntegerv(GL_VIEWPORT, viewport);
@@ -119,7 +119,7 @@ Vector3f Viewer3D::pos(const Vector3f &p, int x, int y)
 	return Vector3f(v);
 }
 
-void Viewer3D::calcMatr()
+void TrackballCamera::calcMatr()
 {
 	qRotation.ToMatrix(rot);
 	rot.Scale(scale);

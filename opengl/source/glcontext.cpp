@@ -5,7 +5,6 @@ GLRenderingContext::GLRenderingContext(HDC hdc,
 	const GLRenderingContextParams *params) : hrc(NULL), _hdc(hdc)
 {
 	curProgram = NULL;
-	curTextureUnit = GL_TEXTURE0;
 	mvpComputed = normComputed = false;
 
 	PIXELFORMATDESCRIPTOR pfd = { };

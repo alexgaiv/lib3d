@@ -3,29 +3,88 @@
 
 #include <string.h>
 
-#pragma region Point2
-
-template<class T>
-bool Point2<T>::operator==(const Point2<T> &p) const {
-	return CmpReal(x, p.x) && CmpReal(y, p.y);
-}
-
-template<class T>
-bool Point2<T>::operator!=(const Point2<T> &p) const {
-	return !operator==(p);
-}
-
 #pragma endregion
-#pragma region Point3
+#pragma region Vector2
 
 template<class T>
-bool Point3<T>::operator==(const Point3<T> &p) const {
-	return CmpReal(x, p.x) && CmpReal(y, p.y) && CmpReal(z, p.z);
+T Vector2<T>::Length() const {
+	return sqrt(x*x + y*y);
 }
 
 template<class T>
-bool Point3<T>::operator!=(const Point3<T> &p) const {
-	return !operator==(p);
+T Vector2<T>::LengthSquared() const {
+	return x*x + y*y;
+}
+
+template<class T>
+void Vector2<T>::Normalize() {
+	T f = T(1) / Length();
+	x *= f; y *= f;
+}
+
+template<class T>
+bool Vector2<T>::operator==(const Vector2<T> &v) const {
+	return CmpReal(x, v.x) && CmpReal(y, v.y);
+}
+
+template<class T>
+bool Vector2<T>::operator!=(const Vector2<T> &v) const {
+	return !operator==(v);
+}
+
+template<class T>
+Vector2<T> Vector2<T>::operator+(const Vector2<T> &v) const {
+	return Vector2<T>(x + v.x, y + v.y);
+}
+
+template<class T>
+Vector2<T> Vector2<T>::operator-(const Vector2<T> &v) const {
+	return Vector2<T>(x - v.x, y - v.y);
+}
+
+template<class T>
+Vector2<T> Vector2<T>::operator-() const {
+	return Vector2<T>(-x, -y);
+}
+
+template<class T>
+Vector2<T> Vector2<T>::operator*(T scale) const {
+	return Vector2<T>(x * scale, y * scale);
+}
+
+template<class T>
+Vector2<T> operator*(T scale, const Vector2<T> &v) {
+	return v*scale;
+}
+
+template<class T>
+Vector2<T> Vector2<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Vector2<T>(x * f, y * f);
+}
+
+template<class T>
+Vector2<T> &Vector2<T>::operator+=(const Vector2<T> &v) {
+	x += v.x; y += v.y;
+	return *this;
+}
+
+template<class T>
+Vector2<T> &Vector2<T>::operator-=(const Vector2<T> &v) {
+	x -= v.x; y -= v.y;
+	return *this;
+}
+
+template<class T>
+Vector2<T> &Vector2<T>::operator*=(T scale) {
+	x *= scale; y *= scale;
+	return *this;
+}
+
+template<class T>
+Vector2<T> &Vector2<T>::operator/=(T scale) {
+	x /= scale; y /= scale;
+	return *this;
 }
 
 #pragma endregion
@@ -38,30 +97,13 @@ T Vector3<T>::Length() const {
 
 template<class T>
 T Vector3<T>::LengthSquared() const {
-	return x*x+y*y+z*z;
+	return x*x + y*y + z*z;
 }
 
 template<class T>
 void Vector3<T>::Normalize() {
-	T l = Length();
-	if (l == T(0)) return;
-	l = T(1) / l;
-	x *= l;
-	y *= l;
-	z *= l;
-}
-
-template<class T>
-T Vector3<T>::Dot(Vector3<T> v1, Vector3<T> v2) {
-	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
-}
-
-template<class T>
-Vector3<T> Vector3<T>::Cross(Vector3<T> v1, Vector3<T> v2) {
-	return Vector3<T>(
-		v1.y*v2.z - v1.z*v2.y,
-		v1.z*v2.x - v1.x*v2.z,
-		v1.x*v2.y - v1.y*v2.x);
+	T f = T(1) / Length();
+	x *= f; y *= f; z *= f;
 }
 
 template<class T>
@@ -110,7 +152,8 @@ Vector3<T> Vector3<T>::operator*(const Matrix33<T> &m) const {
 
 template<class T>
 Vector3<T> Vector3<T>::operator/(T scale) const {
-	return Vector3<T>(x / scale, y / scale, z / scale);
+	T f = T(1) / scale;
+	return Vector3<T>(x * f, y * f, z * f);
 }
 
 template<class T>
@@ -141,17 +184,30 @@ Vector3<T> &Vector3<T>::operator/=(T scale) {
 	x /= scale; y /= scale; z /= scale;
 	return *this;
 }
+
 #pragma endregion
 #pragma region Vector4
 
 template<class T>
+T Vector4<T>::Length() const {
+	return sqrt(x*x + y*y + z*z + w*w);
+}
+
+template<class T>
+T Vector4<T>::LengthSquared() const {
+	return x*x + y*y + z*z + w*w;
+}
+
+template<class T>
+void Vector4<T>::Normalize() {
+	T f = T(1) / Length();
+	x *= f; y *= f; z *= f; w *= f;
+}
+
+template<class T>
 void Vector4<T>::Cartesian() {
-	if (w == T(0)) return;
-	T w_inv = T(1) / w;
-	x *= w_inv;
-	y *= w_inv;
-	z *= w_inv;
-	w = T(1);
+	T f = T(1) / w;
+	x *= f; y *= f; z *= f; w = T(1);
 }
 
 template<class T>
@@ -166,6 +222,31 @@ bool Vector4<T>::operator!=(const Vector4<T> &v) const {
 }
 
 template<class T>
+Vector4<T> Vector4<T>::operator+(const Vector4<T> &v) const {
+	return Vector4<T>(x + v.x, y + v.y, z + v.z, w + v.w);
+}
+
+template<class T>
+Vector4<T> Vector4<T>::operator-(const Vector4<T> &v) const {
+	return Vector4<T>(x - v.x, y - v.y, z - v.z, w - v.w);
+}
+
+template<class T>
+Vector4<T> Vector4<T>::operator-() const {
+	return Vector4<T>(-x, -y, -z, -w);
+}
+
+template<class T>
+Vector4<T> Vector4<T>::operator*(T scale) const {
+	return Vector4<T>(x * scale, y * scale, z * scale, w * scale);
+}
+
+template<class T>
+Vector4<T> operator*(T scale, const Vector4<T> &v) {
+	return v*scale;
+}
+
+template<class T>
 Vector4<T> Vector4<T>::operator*(const Matrix44<T> &m) const {
 	const T *d = m.data;
 	return Vector4<T>(
@@ -176,9 +257,40 @@ Vector4<T> Vector4<T>::operator*(const Matrix44<T> &m) const {
 }
 
 template<class T>
+Vector4<T> Vector4<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Vector4<T>(x * f, y * f, z * f, w * f);
+}
+
+template<class T>
+Vector4<T> &Vector4<T>::operator+=(const Vector4<T> &v) {
+	x += v.x; y += v.y; z += v.z; w += v.w;
+	return *this;
+}
+
+template<class T>
+Vector4<T> &Vector4<T>::operator-=(const Vector4<T> &v) {
+	x -= v.x; y -= v.y; z -= v.z; w -= v.w;
+	return *this;
+}
+
+template<class T>
+Vector4<T> &Vector4<T>::operator*=(T scale) {
+	x *= scale; y *= scale; z *= scale; w *= scale;
+	return *this;
+}
+
+template<class T>
 Vector4<T> &Vector4<T>::operator*=(const Matrix44<T> &m) {
 	return (*this = *this * m);
 }
+
+template<class T>
+Vector4<T> &Vector4<T>::operator/=(T scale) {
+	x /= scale; y /= scale; z /= scale; w /= scale;
+	return *this;
+}
+
 #pragma endregion
 #pragma region Matrix33
 
@@ -188,25 +300,33 @@ Matrix33<T>::Matrix33(const T m[9]) {
 }
 
 template<class T>
-Matrix33<T>::Matrix33(const Matrix44<T> &m) {
-	xAxis = m.xAxis;
-	yAxis = m.yAxis;
-	zAxis = m.zAxis;
-}
+template<class T2>
+Matrix33<T>::Matrix33(const Matrix33<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{ }
 
 template<class T>
 template<class T2>
-Matrix33<T>::Matrix33(const Matrix33<T2> &m) {
-	for (int i = 0; i < 9; i++) {
-		data[i] = T(m.data[i]);
-	}
-}
+Matrix33<T>::Matrix33(const Matrix44<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{ }
 
 template<class T>
 void Matrix33<T>::Scale(T factor) {
 	xAxis *= factor;
 	yAxis *= factor;
 	zAxis *= factor;
+}
+
+template<class T>
+void Matrix33<T>::Scale(const Vector3<T> &factor) {
+	xAxis *= factor.x;
+	yAxis *= factor.y;
+	zAxis *= factor.z;
 }
 
 template<class T>
@@ -218,33 +338,27 @@ Matrix33<T> Matrix33<T>::GetTranspose() const
 	return m1;
 }
 
-#define _DET2(m, n, p, q) (data[m]*data[n]-data[p]*data[q])
+#define _DET2(i1, i2, i3, i4) (data[i1]*data[i2]-data[i3]*data[i4])
+#define _DET3(i1, i2, i3, i4, i5, i6, i7, i8, i9) \
+	(data[i1]*_DET2(i5,i9,i6,i8) - data[i2]*_DET2(i4,i9,i6,i7) + data[i3]*_DET2(i4,i8,i5,i7))
 
 template<class T>
-bool Matrix33<T>::GetInverse(Matrix33<T> &out) const
+Matrix33<T> Matrix33<T>::GetInverse() const
 {
-	T d = Determinant();
-	if (d == T(0)) return false;
-	d = T(1) / d;
-
+	T f = T(1) / Determinant();
 	T adj[9] = {
-		_DET2(4,8,5,7)*d, _DET2(2,7,1,8)*d, _DET2(1,5,2,4)*d,
-		_DET2(5,6,3,8)*d, _DET2(0,8,2,6)*d, _DET2(2,3,0,5)*d,
-		_DET2(3,7,4,6)*d, _DET2(1,6,0,7)*d, _DET2(0,4,1,3)*d,
+		_DET2(4,8,5,7)*f, _DET2(2,7,1,8)*f, _DET2(1,5,2,4)*f,
+		_DET2(5,6,3,8)*f, _DET2(0,8,2,6)*f, _DET2(2,3,0,5)*f,
+		_DET2(3,7,4,6)*f, _DET2(1,6,0,7)*f, _DET2(0,4,1,3)*f
 	};
-	memcpy(out.data, adj, sizeof(T)*9);
-	return true;
+	return Matrix33<T>(adj);
 }
 
 template<class T>
 T Matrix33<T>::Determinant() const
 {
-	return data[0]*_DET2(4,8,5,7) -
-		   data[3]*_DET2(1,8,2,7) +
-		   data[6]*_DET2(1,5,2,4);
+	return _DET3(0,1,2,3,4,5,6,7,8);
 }
-
-#undef _DET2
 
 template<class T>
 void Matrix33<T>::LoadIdentity() {
@@ -322,11 +436,13 @@ Matrix44<T>::Matrix44(const T m[16]) {
 }
 
 template<class T>
-Matrix44<T>::Matrix44(const Matrix33<T> &m) {
+template<class T2>
+Matrix44<T>::Matrix44(const Matrix33<T2> &m) :
+	xAxis(m.xAxis),
+	yAxis(m.yAxis),
+	zAxis(m.zAxis)
+{
 	wx = wy = wz = T(0); wt = T(1);
-	xAxis = m.xAxis;
-	yAxis = m.yAxis;
-	zAxis = m.zAxis;
 }
 
 template<class T>
@@ -341,6 +457,13 @@ void Matrix44<T>::Scale(T factor) {
 	xAxis *= factor;
 	yAxis *= factor;
 	zAxis *= factor;
+}
+
+template<class T>
+void Matrix44<T>::Scale(const Vector3<T> &factor) {
+	xAxis *= factor.x;
+	yAxis *= factor.y;
+	zAxis *= factor.z;
 }
 
 template<class T>
@@ -361,29 +484,22 @@ Matrix44<T> Matrix44<T>::GetTranspose() const
 }
 
 template<class T>
-bool Matrix44<T>::GetInverse(Matrix44<T> &out) const
+Matrix44<T> Matrix44<T>::GetInverse() const
 {
-	T d = Determinant();
-	if (d == T(0)) return false;
-	d = T(1) / d;
-
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-		{
-			Matrix33<T> m_ij;
-			int im = 0;
-			for (int p = 0; p < 4; p++) {
-				if (p == i) continue;
-				for (int q = 0; q < 4; q++) {
-					if (q == j) continue;
-					m_ij.data[im++] = this->m[q][p];
-				}
-			}
-			int sign = (i + j) % 2 ? -1 : 1;
-			out.m[i][j] = (T)sign * m_ij.Determinant() * d;
-		}
-	return true;
+	T f = T(1) / Determinant();
+	T adj[16] =
+	{
+		 _DET3(5,6,7,9,10,11,13,14,15)*f, -_DET3(4,6,7,8,10,11,12,14,15)*f,  _DET3(4,5,7,8,9,11,12,13,15)*f, -_DET3(4,5,6,8,9,10,12,13,14)*f,
+		-_DET3(1,2,3,9,10,11,13,14,15)*f,  _DET3(0,2,3,8,10,11,12,14,15)*f, -_DET3(0,1,3,8,9,11,12,13,15)*f,  _DET3(0,1,2,8,9,10,12,13,14)*f,
+		 _DET3(1,2,3,5,6,7,13,14,15)*f,   -_DET3(0,2,3,4,6,7,12,14,15)*f,    _DET3(0,1,3,4,5,7,12,13,15)*f,  -_DET3(0,1,2,4,5,6,12,13,14)*f,
+		-_DET3(1,2,3,5,6,7,9,10,11)*f,     _DET3(0,2,3,4,6,7,8,10,11)*f,    -_DET3(0,1,3,4,5,7,8,9,11)*f,     _DET3(0,1,2,4,5,6,8,9,10)*f
+	};
+	Matrix44<T> m = Matrix44<T>(adj).GetTranspose();
+	return m;
 }
+
+#undef _DET2
+#undef _DET3
 
 template<class T>
 T Matrix44<T>::Determinant() const
@@ -465,18 +581,6 @@ Matrix44<T> &Matrix44<T>::operator*=(const Matrix44<T> &m) {
 	return *this = Matrix44<T>::Multiply(*this, m);
 }
 #pragma endregion
-#pragma region Color4
-
-template<class T>
-bool Color4<T>::operator==(const Color4<T> &c) const {
-	return CmpReal(r, c.r) && CmpReal(g, c.g) && CmpReal(b, c.b) && CmpReal(a, c.a);
-}
-
-template<class T>
-bool Color4<T>::operator!=(const Color4<T> &c) const {
-	return !operator==(c);
-}
-#pragma endregion
 #pragma region Color3
 
 template<class T>
@@ -488,6 +592,49 @@ template<class T>
 bool Color3<T>::operator!=(const Color3<T> &c) const {
 	return !operator==(c);
 }
-#pragma endregion
 
+template<class T>
+Color3<T> operator*(T scale, Color3<T> c) {
+	return Color3<T>(c.r*scale, c.g*scale, c.b*scale);
+}
+
+template<class T>
+Color3<T> Color3<T>::operator*(T scale) const {
+	return Color3<T>(r*scale, g*scale, b*scale);
+}
+
+template<class T>
+Color3<T> Color3<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Color3<T>(r*f, g*f, b*f);
+}
+#pragma endregion
+#pragma region Color4
+
+template<class T>
+bool Color4<T>::operator==(const Color4<T> &c) const {
+	return CmpReal(r, c.r) && CmpReal(g, c.g) && CmpReal(b, c.b) && CmpReal(a, c.a);
+}
+
+template<class T>
+bool Color4<T>::operator!=(const Color4<T> &c) const {
+	return !operator==(c);
+}
+
+template<class T>
+Color4<T> operator*(T scale, Color4<T> c) {
+	return Color4<T>(c.r*scale, c.g*scale, c.b*scale, c.a*scale);
+}
+
+template<class T>
+Color4<T> Color4<T>::operator*(T scale) const {
+	return Color4<T>(r*scale, g*scale, b*scale, c.a*scale);
+}
+
+template<class T>
+Color4<T> Color4<T>::operator/(T scale) const {
+	T f = T(1) / scale;
+	return Color4<T>(r*f, g*f, b*f, a*f);
+}
+#pragma endregion
 #endif // _DATATYPES_INL_

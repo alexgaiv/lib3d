@@ -5,13 +5,13 @@
 #include "datatypes.h"
 #include "quaternion.h"
 
-class Viewer3D
+class TrackballCamera
 {
 public:
 	Quaternion qRotation;
-	Viewer3D(IDirect3DDevice9 *device);
+	TrackballCamera(IDirect3DDevice9 *device);
 
-	Matrix44f GetWorldTransform();
+	Matrix44f GetViewMatrix();
 	void ApplyTransform();
 	void ResetView();
 	void BeginPan(int winX, int winY);

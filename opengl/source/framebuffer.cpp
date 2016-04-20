@@ -20,7 +20,7 @@ void Renderbuffer::AllocateMultisampleStorage(GLsizei samples,
 	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalFormat, width, height);
 }
 
-Framebuffer::Framebuffer(GLenum target) {
+Framebuffer::Framebuffer(GLenum target) : ptr(new Shared) {
 	this->target = target;
 	glGenFramebuffers(1, &ptr->id);
 }

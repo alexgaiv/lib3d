@@ -6,11 +6,11 @@
 #include "datatypes.h"
 #include "quaternion.h"
 
-class Viewer3D
+class TrackballCamera
 {
 public:
 	Quaternion qRotation;
-	Viewer3D(GLRenderingContext *rc);
+	TrackballCamera(GLRenderingContext *rc);
 
 	Matrix44f GetViewMatrix();
 	void ApplyTransform();

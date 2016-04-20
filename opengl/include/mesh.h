@@ -52,19 +52,6 @@ public:
 	}
 };
 
-class Material
-{
-public:
-	Color3f ambient;
-	Color3f diffuse;
-	Color3f specular;
-	int specularIntensity;
-
-	Texture2D *diffuseMap;
-	Texture2D *normalMap;
-	Texture2D *specularMap;
-};
-
 class Mesh
 {
 public:
