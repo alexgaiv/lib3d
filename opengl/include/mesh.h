@@ -20,30 +20,30 @@ class BoundingBox
 public:
 	Plane front, back, top, bottom, left, right;
 
-	bool Intersects(const Ray &r)
+	bool Intersect(const Ray &r)
 	{
 		Point3f p;
-		if (front.Intersects(r, p)) {
+		if (front.Intersect(r, p)) {
 			if (p.x > left.D && p.x < -right.D &&
 				p.y > bottom.D && p.y < -top.D) return true;
 		}
-		if (back.Intersects(r, p)) {
+		if (back.Intersect(r, p)) {
 			if (p.x > left.D && p.x < -right.D &&
 				p.y > bottom.D && p.y < -top.D) return true;
 		}
-		if (top.Intersects(r, p)) {
+		if (top.Intersect(r, p)) {
 			if (p.x > left.D && p.x < -right.D &&
 				p.z > back.D && p.z < -front.D) return true;
 		}
-		if (bottom.Intersects(r, p)) {
+		if (bottom.Intersect(r, p)) {
 			if (p.x > left.D && p.x < -right.D &&
 				p.z > back.D && p.z < -front.D) return true;
 		}
-		if (left.Intersects(r, p)) {
+		if (left.Intersect(r, p)) {
 			if (p.y > bottom.D && p.y < -top.D &&
 				p.z > back.D && p.z < -front.D) return true;
 		}
-		if (right.Intersects(r, p)) {
+		if (right.Intersect(r, p)) {
 			if (p.y > bottom.D && p.y < -top.D &&
 				p.z > back.D && p.z < -front.D) return true;
 		}

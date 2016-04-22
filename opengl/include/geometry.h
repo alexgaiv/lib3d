@@ -88,7 +88,7 @@ public:
 		return p - Distance(p) * Normal();
 	}
 
-	bool Intersects(const Line &l, Point3f &intersection) const
+	bool Intersect(const Line &l, Point3f &intersection) const
 	{
 		Vector3f n(A, B, C);
 		float d = Dot(l.v, n);
@@ -98,13 +98,13 @@ public:
 		return true;
 	}
 
-	bool Intersects(const Line &l) const
+	bool Intersect(const Line &l) const
 	{
 		Vector3f n(A, B, C);
 		return !CmpReal(Dot(l.v, n), 0.0f);
 	}
 
-	bool Intersects(const Ray &r, Point3f &intersection) const {
+	bool Intersect(const Ray &r, Point3f &intersection) const {
 		Vector3f n(A, B, C);
 		float d = Dot(r.v, n);
 		if (CmpReal(d, 0.0f)) return false;
@@ -114,7 +114,7 @@ public:
 		return true;
 	}
 
-	bool Intersects(const Ray &r) const {
+	bool Intersect(const Ray &r) const {
 		Vector3f n(A, B, C);
 		float d = Dot(r.v, n);
 		if (CmpReal(d, 0.0f)) return false;
@@ -132,16 +132,15 @@ public:
 	Sphere(const Point3f &center, float radius)
 		: center(center), radius(radius) { }
 
-	bool Intersects(const Ray &r) const
+	bool Intersect(const Ray &r) const
 	{
 		Vector3f u = center - r.p;
 		if (Dot(u, r.v) < 0) {
-			return u.Length() <= radius;
+			return u.LengthSquared() <= radius*radius;
 		}
 		else {
 			Vector3f pu = Dot(u, r.v) * r.v;
-			float dist = (u - pu).Length();
-			return dist <= radius;
+			return (u - pu).LengthSquared() <= radius*radius;
 		}
 	}
 };
