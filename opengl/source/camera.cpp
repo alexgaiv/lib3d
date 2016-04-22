@@ -46,8 +46,7 @@ void Camera::RotateX(float angle)
 
 void Camera::RotateY(float angle)
 {
-	Vector3f axis = type == CAM_FREE ? y : Vector3f(0.0f, 1.0f, 0.0f);
-	Quaternion(axis, angle).ToMatrix(m);
+	Quaternion(Vector3f(0.0f, 1.0f, 0.0f), angle).ToMatrix(m);
 	x *= m;
 	z *= m;
 }
