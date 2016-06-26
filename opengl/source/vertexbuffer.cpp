@@ -2,7 +2,7 @@
 #include "shader.h"
 
 VertexBuffer::VertexBuffer(GLRenderingContext *rc, GLenum target)
-	: rc(rc), target(target), size(0), ptr(new Shared)
+	: rc(rc), target(target)
 {
 	if (GLEW_ARB_vertex_buffer_object)
 		glGenBuffers(1, &ptr->id);
@@ -88,7 +88,7 @@ void VertexBuffer::DrawElementsInstanced(GLenum mode, GLsizei count,
 
 void VertexBuffer::SetData(GLsizeiptr size, const void *data, GLenum usage)
 {
-	this->size = size;
+	ptr->size = size;
 	if (GLEW_ARB_vertex_buffer_object) {
 		Bind();
 		glBufferData(target, size, data, usage);
@@ -106,8 +106,8 @@ void VertexBuffer::SetSubData(GLintptr offset, GLsizeiptr size, const void *data
 		Bind();
 		glBufferSubData(target, offset, size, data);
 	}
-	else if (offset < this->size) {
-		memcpy(ptr->data + offset, data, min(size, this->size - offset));
+	else if (offset < ptr->size) {
+		memcpy(ptr->data + offset, data, min(size, ptr->size - offset));
 	}
 }
 
@@ -117,8 +117,8 @@ void VertexBuffer::GetSubData(GLintptr offset, GLsizeiptr size, void *data) cons
 		Bind();
 		glGetBufferSubData(target, offset, size, data);
 	}
-	else if (offset < this->size) {
-		memcpy(data, ptr->data + offset, min(size, this->size - offset));
+	else if (offset < ptr->size) {
+		memcpy(data, ptr->data + offset, min(size, ptr->size - offset));
 	}
 }
 
@@ -162,8 +162,8 @@ void VertexBuffer::CloneTo(VertexBuffer &vb) const
 	}
 	else {
 		delete [] vb.ptr->data;
-		vb.size = size;
-		vb.ptr->data = new BYTE[size];
-		memcpy(vb.ptr->data, ptr->data, size);
+		vb.ptr->size = ptr->size;
+		vb.ptr->data = new BYTE[ptr->size];
+		memcpy(vb.ptr->data, ptr->data, ptr->size);
 	}
 }

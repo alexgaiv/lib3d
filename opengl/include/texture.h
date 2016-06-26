@@ -9,11 +9,27 @@
 
 #define TEX_GENERATE_ID GLuint(-1)
 
-class BaseTexture
+class BaseTexture;
+
+template<>
+class shared_traits<BaseTexture>
 {
-private:
-	struct Shared;
-	my_shared_ptr<Shared> ptr;
+public:
+	bool needDelete;
+	GLuint id;
+	int width, height;
+	bool loaded;
+
+	shared_traits() : needDelete(false), id(0), loaded(false) {
+		width = height = 0;
+	}
+	~shared_traits() {
+		if (needDelete) glDeleteTextures(1, &id);
+	}
+};
+
+class BaseTexture : public Shared<BaseTexture>
+{
 public:
 	BaseTexture(GLenum target, GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_GENERATE_ID);
 
@@ -30,22 +46,9 @@ public:
 	void BuildMipmaps();
 protected:
 	GLenum target, textureUnit;
-	int width, height;
-	int internalFormat, format;
 
 	bool loadFromTGA(const char *filename, Image &img);
-	void texImage2D(GLenum target, BYTE *imageData);
-private:
-	struct Shared
-	{
-		bool needDelete;
-		GLuint id;
-		Shared() : needDelete(false), id(0) { }
-		~Shared() {
-			if (needDelete) glDeleteTextures(1, &id);
-		}
-	};
-
+	void texImage2D(GLenum target, const Image &img);
 	void read(HANDLE hFile, LPVOID lpBuffer, DWORD nNumBytes);
 };
 
@@ -53,17 +56,15 @@ class Texture2D : public BaseTexture
 {
 public:
 	Texture2D(GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_GENERATE_ID);
-	Texture2D(const char *name, GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_GENERATE_ID);
+	Texture2D(const char *filename, GLenum textureUnit = GL_TEXTURE0, GLuint id = TEX_GENERATE_ID);
 
-	int GetWidth() const { return width; }
-	int GetHeight() const { return height; }
+	int GetWidth() const { return ptr->width; }
+	int GetHeight() const { return ptr->height; }
 
-	bool IsLoaded() const { return loaded; }
+	bool IsLoaded() const { return ptr->loaded; }
 	bool LoadFromTGA(const char *filename);
 	void SetTexImage(GLenum level, GLint internalFormat, GLsizei width, GLsizei height,
 		GLint border, GLenum format, GLenum type, const GLvoid *data);
-private:
-	bool loaded;
 };
 
 class CubeTexture : public BaseTexture
@@ -72,10 +73,8 @@ public:
 	CubeTexture(GLenum textureUnit = GL_TEXTURE0);
 	CubeTexture(const char **sides, GLenum textureUnit = GL_TEXTURE0);
 
-	bool IsLoaded() const { return loaded; }
+	bool IsLoaded() const { return ptr->loaded; }
 	bool LoadFromTGA(const char **sides);
-private:
-	bool loaded;
 };
 
 #endif // _TEXTURE2D_H_

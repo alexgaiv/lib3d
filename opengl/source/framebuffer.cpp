@@ -1,13 +1,5 @@
 #include "framebuffer.h"
 
-Renderbuffer::Renderbuffer() {
-	glGenRenderbuffers(1, &id);
-}
-
-Renderbuffer::~Renderbuffer() {
-	glDeleteRenderbuffers(1, &id);
-}
-
 void Renderbuffer::AllocateStorage(GLenum internalFormat, GLsizei width, GLsizei height) {
 	Bind();
 	glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
@@ -20,9 +12,8 @@ void Renderbuffer::AllocateMultisampleStorage(GLsizei samples,
 	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalFormat, width, height);
 }
 
-Framebuffer::Framebuffer(GLenum target) : ptr(new Shared) {
+Framebuffer::Framebuffer(GLenum target) {
 	this->target = target;
-	glGenFramebuffers(1, &ptr->id);
 }
 
 void Framebuffer::AttachTexture(GLenum attachment, const BaseTexture &texture, GLint level)
@@ -45,10 +36,4 @@ void Framebuffer::AttachRenderbuffer(GLenum attachment, const Renderbuffer &rb)
 	glFramebufferRenderbuffer(target, attachment, GL_RENDERBUFFER, rb.GetId());
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, bind_draw);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, bind_read);
-}
-
-void Framebuffer::AttachDepthRenderbuffer(GLsizei width, GLsizei height)
-{
-	depthBuffer.AllocateStorage(GL_DEPTH_COMPONENT24, width, height);
-	AttachRenderbuffer(GL_DEPTH_ATTACHMENT, depthBuffer);
 }

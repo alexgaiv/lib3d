@@ -1,6 +1,24 @@
 #include "image.h"
 
-Image Image::Clone()
+#pragma pack(push, 1)
+struct TGAHEADER
+{
+	BYTE   idLength;
+	BYTE   colorMapType;
+	BYTE   imageType;
+	USHORT colorMapOffset;
+	USHORT colorMapLength;
+	BYTE   colorMapEntrySize;
+	USHORT xOrigin;
+	USHORT yOrigin;
+	USHORT width;
+	USHORT height;
+	BYTE   depth;
+	BYTE   descriptor;
+};
+#pragma pack(pop)
+
+Image Image::Clone() const
 {
 	Image img;
 	img.isGood = isGood;
@@ -25,7 +43,7 @@ void Image::read(HANDLE hFile, LPVOID lpBuffer, DWORD nNumBytes)
 
 bool Image::LoadTga(const char *filename)
 {
-	ptr = my_shared_ptr<Shared>(new Shared);
+	ptr = my_shared_ptr<SharedTraits>::MakeNew();
 	width = height = depth = 0;
 	dataSize = 0;
 

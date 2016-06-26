@@ -11,49 +11,53 @@
 #include <string>
 
 class GLRenderingContext;
+class Shader;
+class ProgramObject;
 
-const struct {
-	int Vertex;
-	int Normal;
-	int TexCoord;
-	int Tangent;
-	int Binormal;
-} AttribsLocations = { 0, 1, 2, 3, 4 };
-
-class Shader
+enum AttribLocation
 {
-private:
-	struct Shared;
-	my_shared_ptr<Shared> ptr;
+	Vertex = 0,
+	Normal = 1,
+	TexCoord = 2,
+	Tangent = 3,
+	Binormal = 4
+};
+
+template<>
+class shared_traits<Shader>
+{
+public:
+	GLuint handle;
+	bool compiled;
+	shared_traits() : handle(0), compiled(false) { }
+	~shared_traits() { glDeleteShader(handle); }
+};
+
+class Shader : public Shared<Shader>
+{
 public:
 	Shader(GLenum type);
 	Shader(GLenum type, const char *path);
 
 	GLuint Handle() const { return ptr->handle; }
-	bool IsCompiled() const { return compiled; }
+	bool IsCompiled() const { return ptr->compiled; }
 	bool CompileFile(const char *filename);
 	bool CompileSource(const char *source, int length = 0);
 private:
-	struct Shared
-	{
-		GLuint handle;
-		Shared() : handle(0) { }
-		~Shared() { glDeleteShader(handle); }
-	};
-	bool compiled;
-	bool _log();
+	bool log();
 };
 
-class _PO_Shared
+template<>
+class shared_traits<ProgramObject>
 {
-private:
-	GLRenderingContext *rc;
 public:
+	GLRenderingContext *rc;
 	GLuint handle;
+	bool linked;
 	bool fUpdateMV, fUpdateProj;
 
-	_PO_Shared(GLRenderingContext *rc);
-	~_PO_Shared();
+	shared_traits();
+	~shared_traits();
 
 	struct Uniforms
 	{
@@ -68,16 +72,14 @@ public:
 	} uniforms;
 };
 
-class ProgramObject
+class ProgramObject : public Shared<ProgramObject>
 {
-private:
-	my_shared_ptr<_PO_Shared> ptr;
 public:
 	ProgramObject(GLRenderingContext *rc);
 	ProgramObject(GLRenderingContext *rc, const char *vertPath, const char *fragPath);
 
 	GLuint Handle() const { return ptr->handle; }
-	bool IsLinked() const { return linked; }
+	bool IsLinked() const { return ptr->linked; }
 	void AttachShader(const Shader &shader);
 	void DetachShader(const Shader &shader);
 	bool Link();
@@ -111,7 +113,6 @@ private:
 	friend class VertexBuffer;
 	
 	GLRenderingContext *rc;
-	bool linked;
 	
 	void updateMatrices();
 	void updateMVP();

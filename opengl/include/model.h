@@ -22,6 +22,7 @@ public:
 
 	void AddMesh(const Mesh &mesh) { meshes.push_back(new Mesh(mesh)); }
 	bool LoadObj(const char *filename);
+	bool LoadRaw(const char *filename);
 
 	Matrix44f GetTransform() const { return transform; }
 	const Matrix44f &GetTransformRef() const { return transform; }
@@ -59,7 +60,7 @@ private:
 
 	void clone(const Model &m);
 	void cleanup();
-	void read_num(const string &line, char &c, int &i, int &n);
+	void cleanupMeshes();
 };
 
 #endif // _MODEL_H_

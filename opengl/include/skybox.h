@@ -16,9 +16,10 @@ public:
 	void Draw();
 private:
 	GLRenderingContext *rc;
+	VertexArrayObject vao;
+	CubeTexture tex;
 	VertexBuffer *vertices;
 	ProgramObject *prog;
-	CubeTexture tex;
 
 	void init();
 };

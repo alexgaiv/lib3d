@@ -6,33 +6,24 @@
 #include "datatypes.h"
 #include <new>
 
-#pragma pack(push, 1)
-struct TGAHEADER
-{
-	BYTE   idLength;
-	BYTE   colorMapType;
-	BYTE   imageType;
-	USHORT colorMapOffset;
-	USHORT colorMapLength;
-	BYTE   colorMapEntrySize;
-	USHORT xOrigin;
-	USHORT yOrigin;
-	USHORT width;
-	USHORT height;
-	BYTE   depth;
-	BYTE   descriptor;
-};
-#pragma pack(pop)
+class Image;
 
-class Image
+template<>
+class shared_traits<Image>
 {
-private:
-	struct Shared;
-	my_shared_ptr<Shared> ptr;
 public:
-	Image() : isGood(false), dataSize(0), ptr(new Shared) {
+	BYTE *data;
+	shared_traits() : data(0) { }
+	~shared_traits() { delete [] data; }
+};
+
+class Image : public Shared<Image>
+{
+public:
+	Image() : isGood(false), dataSize(0) {
 		width = height = depth = 0;
 	}
+
 	bool LoadTga(const char *filename);
 
 	operator bool() const { return isGood; }
@@ -58,15 +49,8 @@ public:
 		}
 	}
 
-	Image Clone();
+	Image Clone() const;
 private:
-	struct Shared
-	{
-		BYTE *data;
-		Shared() : data(0) { }
-		~Shared() { delete [] data; }
-	};
-
 	bool isGood;
 	int dataSize;
 	int width, height;

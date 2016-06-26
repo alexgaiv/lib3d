@@ -127,19 +127,20 @@ void Skybox::init()
 	}
 	prog = module->prog;
 	vertices = module->vertices;
+
+	vao.Bind();
+	vao.EnableVertexAttrib(AttribLocation::Vertex);
+	vertices->AttribPointer(0, 3, GL_FLOAT);
 }
 
 void Skybox::Draw()
 {
 	glDepthMask(GL_FALSE);
-	glEnableVertexAttribArray(AttribsLocations.Vertex);
+	vao.Bind();
 
 	prog->Use();
 	tex.Bind();
-	vertices->Bind();
-	vertices->AttribPointer(0, 3, GL_FLOAT);
 	vertices->DrawArrays(GL_TRIANGLES, 0, 36);
 
 	glDepthMask(GL_TRUE);
-	glDisableVertexAttribArray(AttribsLocations.Vertex);
 }

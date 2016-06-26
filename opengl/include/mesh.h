@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "nullable.h"
 #include "texture.h"
 #include "glcontext.h"
 #include "datatypes.h"
@@ -15,51 +16,17 @@
 
 using namespace std;
 
-class BoundingBox
+enum VertexFormat
 {
-public:
-	Plane front, back, top, bottom, left, right;
-
-	bool Intersect(const Ray &r)
-	{
-		Point3f p;
-		if (front.Intersect(r, p)) {
-			if (p.x > left.D && p.x < -right.D &&
-				p.y > bottom.D && p.y < -top.D) return true;
-		}
-		if (back.Intersect(r, p)) {
-			if (p.x > left.D && p.x < -right.D &&
-				p.y > bottom.D && p.y < -top.D) return true;
-		}
-		if (top.Intersect(r, p)) {
-			if (p.x > left.D && p.x < -right.D &&
-				p.z > back.D && p.z < -front.D) return true;
-		}
-		if (bottom.Intersect(r, p)) {
-			if (p.x > left.D && p.x < -right.D &&
-				p.z > back.D && p.z < -front.D) return true;
-		}
-		if (left.Intersect(r, p)) {
-			if (p.y > bottom.D && p.y < -top.D &&
-				p.z > back.D && p.z < -front.D) return true;
-		}
-		if (right.Intersect(r, p)) {
-			if (p.y > bottom.D && p.y < -top.D &&
-				p.z > back.D && p.z < -front.D) return true;
-		}
-
-		return false;
-	}
+	VF_XYZ = 1,
+	VF_NORMAL = 2,
+	VF_TEXCOORD = 4
 };
 
 class Mesh
 {
 public:
 	Mesh(GLRenderingContext *rc);
-	Mesh(const Mesh &m);
-	~Mesh();
-
-	Mesh &operator=(const Mesh &m);
 
 	bool HasNormals() const { return normals != NULL; }
 	bool HasTexCoords() const { return texCoords != NULL; }
@@ -67,12 +34,9 @@ public:
 	int GetIndicesCount() const { return indicesCount >= 0 ? indicesCount : indices->GetSize() / sizeof(int); }
 	int GetFaceCount() const { return GetIndicesCount() / 3; }
 
+	void SetVertexFormat(int vfFlags);
 	void SetFirstIndex(int firstIndex) { this->firstIndex = firstIndex; }
 	void SetIndicesCount(int indicesCount) { this->indicesCount = indicesCount; } // -1 to draw all
-
-	void BindTexture(const BaseTexture &texture);
-	void BindNormalMap(const Texture2D &normalMap);
-	void BindSpecularMap(const Texture2D &specularMap);
 
 	void RecalcTangents();
 
@@ -82,27 +46,22 @@ public:
 	bool LoadObj(const char *filename);
 	bool LoadRaw(const char *filename);
 
-	BoundingBox boundingBox;
+	AABox boundingBox;
 	Sphere boundingSphere;
 
-	VertexBuffer *vertices;
-	VertexBuffer *indices;
-	VertexBuffer *normals;
-	VertexBuffer *texCoords;
-	VertexBuffer *tangents, *binormals;
+	VertexArrayObject vao;
+	Material material;
+	Nullable<VertexBuffer> vertices;
+	Nullable<VertexBuffer> indices;
+	Nullable<VertexBuffer> normals;
+	Nullable<VertexBuffer> texCoords;
+	Nullable<VertexBuffer> tangents, binormals;
 private:
 	GLRenderingContext *rc;
-	BaseTexture *texture;
-	Texture2D *normalMap, *specularMap;
 
 	int firstIndex;
 	int indicesCount;
 	bool tangentsComputed;
-
-	void clone(const Mesh &m);
-	void cleanup();
-
-	void read_num(const string &line, char &c, int &i, int &n);
 };
 
 #endif // _MESH_H_

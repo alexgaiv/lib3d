@@ -34,10 +34,23 @@ struct WindowInfoStruct
 	int     cbWndExtra;
 };
 
-class BaseWindow
+class BaseWindow;
+
+template<>
+class shared_traits<BaseWindow>
+{
+public:
+	HWND hwnd;
+	ATOM classAtom;
+	shared_traits() : hwnd(NULL), classAtom(0) { }
+	~shared_traits();
+};
+
+class BaseWindow : public Shared<BaseWindow>
 {
 public:
 	BaseWindow() : m_hwnd(NULL) { }
+	virtual ~BaseWindow() { }
 
 	BOOL Create(
 		LPCTSTR lpWindowName,
@@ -63,7 +76,7 @@ protected:
 	virtual WindowInfoStruct GetWindowInfo();
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
-	struct Shared
+	/*struct Shared
 	{
 		HWND hwnd;
 		ATOM classAtom;
@@ -71,7 +84,7 @@ private:
 		~Shared();
 	};
 
-	my_shared_ptr<Shared> ptr;
+	my_shared_ptr<Shared> ptr;*/
 
 	static ATOM registerWindow(BaseWindow *pThis);
 	static BOOL CALLBACK setFontProc(HWND hwnd, LPARAM hFont);

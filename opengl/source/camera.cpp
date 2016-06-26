@@ -25,6 +25,12 @@ void Camera::ApplyTransform(GLRenderingContext *rc) {
 	rc->MultModelView(GetViewMatrix());
 }
 
+void Camera::ResetTransform() {
+	x = y = z = t = Vector3f(0.0f);
+	x.x = y.y = z.z = 1.0f;
+	m.LoadIdentity();
+}
+
 void Camera::MoveX(float step) {
 	t += (type == CAM_FREE ? x : Vector3f(x.x, 0.0f, x.z)) * step;
 }

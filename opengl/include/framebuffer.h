@@ -5,33 +5,46 @@
 #include "texture.h"
 #include "sharedptr.h"
 
-class Renderbuffer
+class Renderbuffer;
+class Framebuffer;
+
+template<>
+class shared_traits<Renderbuffer>
 {
 public:
-	Renderbuffer();
-	~Renderbuffer();
+	GLuint id;
+	shared_traits() { glGenRenderbuffers(1, &id); }
+	~shared_traits() { glDeleteRenderbuffers(1, &id);  }
+};
 
+class Renderbuffer : public Shared<Renderbuffer>
+{
+public:
 	void AllocateStorage(GLenum internalFormat, GLsizei width, GLsizei height);
 	void AllocateMultisampleStorage(GLsizei samples, GLenum internalFormat, GLsizei width, GLsizei height);
 
-	GLuint GetId() const { return id; }
+	GLuint GetId() const { return ptr->id; }
 	void Bind() {
-		glBindRenderbuffer(GL_RENDERBUFFER, id);
+		glBindRenderbuffer(GL_RENDERBUFFER, ptr->id);
 	}
-private:
-	GLuint id;
 };
 
-class Framebuffer
+template<>
+class shared_traits<Framebuffer>
 {
-	struct Shared;
-	my_shared_ptr<Shared> ptr;
+public:
+	GLuint id;
+	shared_traits() { glGenFramebuffers(1, &id); }
+	~shared_traits() { glDeleteFramebuffers(1, &id); }
+};
+
+class Framebuffer : public Shared<Framebuffer>
+{
 public:
 	Framebuffer(GLenum target = GL_FRAMEBUFFER);
 
 	void AttachTexture(GLenum attachment, const BaseTexture &texture, GLint level = 0);
 	void AttachRenderbuffer(GLenum attachment, const Renderbuffer &rb);
-	void AttachDepthRenderbuffer(GLsizei width, GLsizei height);
 
 	GLuint GetId() const { return ptr->id; }
 	void Bind() {
@@ -47,15 +60,7 @@ public:
 		return GetStatus() == GL_FRAMEBUFFER_COMPLETE;
 	}
 private:
-	struct Shared
-	{
-		GLuint id;
-		Shared() : id(0) { }
-		~Shared() { glDeleteFramebuffers(1, &id); }
-	};
-	
 	GLenum target;
-	Renderbuffer depthBuffer;
 };
 
 #endif // _FRAMEBUFFER_H

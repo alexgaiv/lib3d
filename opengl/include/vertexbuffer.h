@@ -6,12 +6,47 @@
 #include "sharedptr.h"
 
 class GLRenderingContext;
+class VertexBuffer;
+class VertexArrayObject;
 
-class VertexBuffer
+template<>
+class shared_traits<VertexArrayObject>
 {
-private:
-	struct Shared;
-	my_shared_ptr<Shared> ptr;
+public:
+	GLuint vao;
+	shared_traits() { glGenVertexArrays(1, &vao); }
+	~shared_traits() { glDeleteVertexArrays(1, &vao); }
+};
+
+class VertexArrayObject : public Shared<VertexArrayObject>
+{
+public:
+	GLuint Handle() const { return ptr->vao; }
+	void Bind() { glBindVertexArray(ptr->vao); }
+	void Unbind() { glBindVertexArray(0); }
+	void EnableVertexAttrib(int index) { glEnableVertexAttribArray(index); }
+	void DisableVertexAttrib(int index) { glDisableVertexAttribArray(index); }
+	void VertexAttribDivisor(int index, int divisor) { glVertexAttribDivisor(index, divisor); }
+};
+
+template<>
+class shared_traits<VertexBuffer>
+{
+public:
+	GLuint id;
+	int size;
+	BYTE *data;
+		
+	shared_traits() : id(0), size(0), data(NULL) { }
+	~shared_traits() {
+		if (GLEW_ARB_vertex_buffer_object)
+			glDeleteBuffers(1, &id);
+		else delete [] data;
+	}
+};
+
+class VertexBuffer : public Shared<VertexBuffer>
+{
 public:
 	VertexBuffer(GLRenderingContext *rc, GLenum target);
 
@@ -37,7 +72,7 @@ public:
 	void SetData(GLsizeiptr size, const void *data, GLenum usage);
 	void SetSubData(GLintptr offset, GLsizeiptr size, const void *data);
 	void GetSubData(GLintptr offset, GLsizeiptr size, void *data) const;
-	int GetSize() const { return size; }
+	int GetSize() const { return ptr->size; }
 	GLenum GetUsage() const;
 
 	void *Map(GLenum access) const;
@@ -45,22 +80,8 @@ public:
 
 	void CloneTo(VertexBuffer &vb) const;
 private:
-	struct Shared
-	{
-		GLuint id;
-		BYTE *data;
-		
-		Shared() : id(0), data(NULL) { }
-		~Shared() {
-			if (GLEW_ARB_vertex_buffer_object)
-				glDeleteBuffers(1, &id);
-			else delete [] data;
-		}
-	};
-
 	GLRenderingContext *rc;
 	GLenum target;
-	int size;
 };
 
 #endif // _VERTEX_BUFFER_H

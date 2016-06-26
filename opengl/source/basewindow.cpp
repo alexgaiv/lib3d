@@ -1,6 +1,6 @@
 #include "BaseWindow.h"
 
-BaseWindow::Shared::~Shared() {
+shared_traits<BaseWindow>::~shared_traits() {
 	if (IsWindow(hwnd)) {
 		SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
 		DestroyWindow(hwnd);
@@ -16,7 +16,6 @@ BOOL BaseWindow::Create(LPCTSTR lpWindowName, int x, int y, int width, int heigh
 	m_hwnd = CreateWindowEx(dwExStyle, MAKEINTATOM(classAtom), lpWindowName, dwStyle,
 		x, y, width, height, hWndParent, hMenu, GetModuleHandle(NULL), this);
 
-	ptr = my_shared_ptr<Shared>(new Shared);
 	ptr->hwnd = m_hwnd;
 	ptr->classAtom = classAtom;
 

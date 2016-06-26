@@ -23,8 +23,13 @@ public:
 		return *this;
 	}
 
+	static my_shared_ptr<T> MakeNew() {
+		return my_shared_ptr<T>(new T);
+	}
+
 	T *Get() { return ptr; }
 	const T *Get() const { return ptr; }
+	int GetRefCount() const { return *refCount; }
 
 	T *operator->() { return ptr; }
 	T &operator*() { return *ptr; }
@@ -46,6 +51,19 @@ private:
 			delete refCount;
 		}
 	}
+};
+
+template<class T>
+class shared_traits;
+
+template<class T>
+class Shared
+{
+public:
+	Shared() : ptr(new SharedTraits) { }
+protected:
+	typedef shared_traits<T> SharedTraits;
+	my_shared_ptr<SharedTraits> ptr;
 };
 
 #endif // _SHARED_PTR_H_

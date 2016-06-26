@@ -1,14 +1,13 @@
 #include "shader.h"
 #include <strsafe.h>
 
-Shader::Shader(GLenum type) : ptr(new Shared) {
+Shader::Shader(GLenum type) {
 	ptr->handle = glCreateShader(type);
-	compiled = false;
 }
 
-Shader::Shader(GLenum type, const char *path) : ptr(new Shared) {
+Shader::Shader(GLenum type, const char *path) {
 	ptr->handle = glCreateShader(type);
-	compiled = CompileFile(path);
+	ptr->compiled = CompileFile(path);
 }
 
 bool Shader::CompileFile(const char *filename)
@@ -31,17 +30,17 @@ bool Shader::CompileFile(const char *filename)
 	glShaderSource(ptr->handle, numLines, (const GLchar **)source, NULL);
 	glCompileShader(ptr->handle);
 	delete [] source;
-	return _log();
+	return log();
 }
 
 bool Shader::CompileSource(const char *source, int length)
 {
 	glShaderSource(ptr->handle, 1, &source, length ? &length : NULL);
 	glCompileShader(ptr->handle);
-	return _log();
+	return log();
 }
 
-bool Shader::_log()
+bool Shader::log()
 {
 	GLint isCompiled = 0;
 	GLint logLen = 0;
@@ -54,23 +53,24 @@ bool Shader::_log()
 		OutputDebugString(infoLog);
 		delete [] infoLog;
 	}
-	compiled = isCompiled ? true : false;
+	ptr->compiled = isCompiled ? true : false;
 	return isCompiled == TRUE;
 }
 
-_PO_Shared::_PO_Shared(GLRenderingContext *rc) : rc(rc), handle(0)
+shared_traits<ProgramObject>::shared_traits()
+	: rc(rc), handle(0), linked(false)
 {
-	rc->AttachProgram(this);
+	handle = glCreateProgram();
 	fUpdateMV = fUpdateProj = true;
 }
 
-_PO_Shared::~_PO_Shared()
+shared_traits<ProgramObject>::~shared_traits()
 {
 	rc->DetachProgram(this);
 	glDeleteProgram(handle);
 }
 
-_PO_Shared::Uniforms::Uniforms()
+shared_traits<ProgramObject>::Uniforms::Uniforms()
 {
 	count = 0;
 	names = NULL;
@@ -78,7 +78,7 @@ _PO_Shared::Uniforms::Uniforms()
 	mvLoc = projLoc = mvpLoc = normLoc = 0;
 }
 
-void _PO_Shared::Uniforms::free() {
+void shared_traits<ProgramObject>::Uniforms::free() {
 	if (count == 0) return;
 	for (int i = 0; i < count; i++) {
 		delete [] names[i];
@@ -87,18 +87,16 @@ void _PO_Shared::Uniforms::free() {
 	delete [] types;
 }
 
-ProgramObject::ProgramObject(GLRenderingContext *rc)
-	: rc(rc), ptr(new _PO_Shared(rc))
+ProgramObject::ProgramObject(GLRenderingContext *rc) : rc(rc)
 {
-	ptr->handle = glCreateProgram();
-	linked = false;
+	ptr->rc = rc;
+	rc->AttachProgram(ptr.Get());
 }
 
-ProgramObject::ProgramObject(GLRenderingContext *rc, const char *vertPath, const char *fragPath)
-	: rc(rc), ptr(new _PO_Shared(rc))
+ProgramObject::ProgramObject(GLRenderingContext *rc, const char *vertPath, const char *fragPath) : rc(rc)
 {
-	ptr->handle = glCreateProgram();
-	linked = false;
+	ptr->rc = rc;
+	rc->AttachProgram(ptr.Get());
 
 	Shader vertShader(GL_VERTEX_SHADER, vertPath);
 	Shader fragShader(GL_FRAGMENT_SHADER, fragPath);
@@ -168,11 +166,11 @@ bool ProgramObject::Link()
 	GLint isLinked = 0;
 	GLint logLen = 0;
 
-	BindAttribLocation(AttribsLocations.Vertex, "Vertex");
-	BindAttribLocation(AttribsLocations.Normal, "Normal");
-	BindAttribLocation(AttribsLocations.TexCoord, "TexCoord");
-	BindAttribLocation(AttribsLocations.Tangent, "Tangent");
-	BindAttribLocation(AttribsLocations.Binormal, "Binormal");
+	BindAttribLocation(AttribLocation::Vertex, "Vertex");
+	BindAttribLocation(AttribLocation::Normal, "Normal");
+	BindAttribLocation(AttribLocation::TexCoord, "TexCoord");
+	BindAttribLocation(AttribLocation::Tangent, "Tangent");
+	BindAttribLocation(AttribLocation::Binormal, "Binormal");
 
 	glLinkProgram(ptr->handle);
 	glGetProgramiv(ptr->handle, GL_LINK_STATUS, &isLinked);
@@ -186,10 +184,10 @@ bool ProgramObject::Link()
 		delete [] infoLog;
 	}
 
-	linked = isLinked == TRUE;
-	if (linked)
+	ptr->linked = isLinked == TRUE;
+	if (ptr->linked)
 	{
-		_PO_Shared::Uniforms &uniforms = ptr->uniforms;
+		shared_traits<ProgramObject>::Uniforms &uniforms = ptr->uniforms;
 		uniforms.free();
 		glGetProgramiv(ptr->handle, GL_ACTIVE_UNIFORMS, &uniforms.count);
 		if (uniforms.count != 0) {
@@ -211,7 +209,7 @@ bool ProgramObject::Link()
 		}
 	}
 
-	return linked;
+	return ptr->linked;
 }
 
 GLint ProgramObject::GetAttribLocation(const char *name) {

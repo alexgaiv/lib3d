@@ -3,11 +3,8 @@
 #include <new>
 
 BaseTexture::BaseTexture(GLenum target, GLenum unit, GLuint id)
-	: target(target), textureUnit(unit), ptr(new Shared)
+	: target(target), textureUnit(unit)
 {
-	width = height = 0;
-	internalFormat = format = 0;
-
 	if (id == TEX_GENERATE_ID) {
 		glGenTextures(1, &ptr->id);
 		ptr->needDelete = true;
@@ -48,7 +45,7 @@ void BaseTexture::SetBorderColor(Color4f color)
 void BaseTexture::BuildMipmaps() {
 	if (glGenerateMipmap) {
 		Bind();
-		glGenerateMipmap(GL_TEXTURE_2D);
+		glGenerateMipmap(target);
 	}
 }
 
@@ -65,8 +62,16 @@ bool BaseTexture::loadFromTGA(const char *filename, Image &img)
 	img.LoadTga(filename);
 	if (!img) return false;
 
-	width = img.GetWidth();
-	height = img.GetHeight();
+	ptr->width = img.GetWidth();
+	ptr->height = img.GetHeight();
+
+	return true;
+}
+
+void BaseTexture::texImage2D(GLenum target, const Image &img)
+{
+	Bind();
+	int format = 0, internalFormat = 0;
 
 	switch (img.GetDepth())
 	{
@@ -83,34 +88,30 @@ bool BaseTexture::loadFromTGA(const char *filename, Image &img)
 		format = GL_BGRA;
 		break;
 	}
-	return true;
-}
 
-void BaseTexture::texImage2D(GLenum target, BYTE *imageData)
-{
-	Bind();
-	glTexImage2D(target, 0, internalFormat, width,
-		height, 0, format, GL_UNSIGNED_BYTE, imageData);
+	glTexImage2D(target, 0, internalFormat, img.GetWidth(),
+		img.GetHeight(), 0, format, GL_UNSIGNED_BYTE, img.GetData());
 }
 
 Texture2D::Texture2D(GLenum textureUnit, GLuint id)
-	: BaseTexture(GL_TEXTURE_2D, textureUnit, id), loaded(false)
+	: BaseTexture(GL_TEXTURE_2D, textureUnit, id)
 { }
 
-Texture2D::Texture2D(const char *name, GLenum textureUnit, GLuint id)
-	: BaseTexture(GL_TEXTURE_2D, textureUnit, id), loaded(false)
+Texture2D::Texture2D(const char *filename, GLenum textureUnit, GLuint id)
+	: BaseTexture(GL_TEXTURE_2D, textureUnit, id)
 {
-	LoadFromTGA(name);
+	LoadFromTGA(filename);
 }
 
-bool Texture2D::LoadFromTGA(const char *name)
+bool Texture2D::LoadFromTGA(const char *filename)
 {
 	Image img;
-	loaded = loadFromTGA(name, img);
-	if (loaded) {
-		texImage2D(target, img.GetData());
+	ptr->loaded = loadFromTGA(filename, img);
+	if (ptr->loaded) {
+		texImage2D(target, img);
+		return true;
 	}
-	return loaded;
+	return false;
 }
 
 void Texture2D::SetTexImage(GLenum level, GLint internalFormat, GLsizei width, GLsizei height,
@@ -121,11 +122,11 @@ void Texture2D::SetTexImage(GLenum level, GLint internalFormat, GLsizei width, G
 }
 
 CubeTexture::CubeTexture(GLenum textureUnit)
-	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit), loaded(false)
+	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit)
 { }
 
 CubeTexture::CubeTexture(const char **sides, GLenum textureUnit)
-	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit), loaded(false)
+	: BaseTexture(GL_TEXTURE_CUBE_MAP, textureUnit)
 {
 	LoadFromTGA(sides);
 }
@@ -145,11 +146,12 @@ bool CubeTexture::LoadFromTGA(const char **sides)
 	};
 
 	Image img;
-	loaded = true;
+	bool loaded = true;
 	for (int i = 0; i < 6; i++) {
 		loaded &= loadFromTGA(sides[i], img);
 		if (!loaded) break;
-		texImage2D(targets[i], img.GetData());
+		texImage2D(targets[i], img);
 	}
+	ptr->loaded = loaded;
 	return loaded;
 }

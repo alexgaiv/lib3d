@@ -7,12 +7,44 @@
 #include "sharedptr.h"
 
 class Text2D;
+class Font2D;
 
-class Font2D
+template<>
+class shared_traits<Font2D>
 {
 public:
-	Font2D(const char *name);
-	
+	struct Charset {
+		int base;
+		int startChar;
+		int endChar;
+	};
+
+	int numChars, numCharsets;
+	Charset *charsets;
+	int *charWidth;
+
+	Texture2D fontTexture;
+	int numCellsX, numCellsY;
+	float fontHeight;
+
+	float dty;
+	float numCellsX_inv, numCellsY_inv;
+	float texWidth_inv;
+
+	shared_traits();
+	~shared_traits();
+	bool load(const char *name);
+};
+
+class Font2D : public Shared<Font2D>
+{
+public:
+	Font2D() : lineSpacing(0) { }
+	Font2D(const char *filename);
+
+	void LoadFnt(const char *filename);
+	bool IsLoaded() { return loaded; }
+
 	void SetColor(Color4f color) { this->color = color; }
 	Color4f GetColor() const { return color; }
 	int GetHeight() const { return (int)ptr->fontHeight; }
@@ -20,38 +52,14 @@ public:
 	int CalcTextWidth(const wchar_t *text);
 private:
 	friend class Text2D;
+	friend class SharedTraits;
 
-	struct Charset {
-		int base;
-		int startChar;
-		int endChar;
-	};
-
-	struct Shared
-	{
-		int numChars, numCharsets;
-		Charset *charsets;
-		int *charWidth;
-
-		Texture2D fontTexture;
-		int numCellsX, numCellsY;
-		float fontHeight;
-
-		float dty;
-		float numCellsX_inv, numCellsY_inv;
-		float texWidth_inv;
-
-		Shared();
-		~Shared();
-		void load(const char *name);
-	};
-
-	my_shared_ptr<Shared> ptr;
 	Color4f color;
 	int lineSpacing;
-
-	Shared *operator->() { return ptr.Get(); }
-	const Shared *operator->() const { return ptr.Get(); }
+	bool loaded;
+	
+	SharedTraits *operator->() { return ptr.Get(); }
+	const SharedTraits *operator->() const { return ptr.Get(); }
 };
 
 class Text2D
@@ -65,13 +73,13 @@ public:
 	void SetText(const wchar_t *text);
 	void Draw(int x, int y);
 	
-
 	Text2D &operator=(const Text2D &t);
 private:
 	GLRenderingContext *rc;
-	ProgramObject *prog;
 	int numVerts;
+	VertexArrayObject vao;
 	VertexBuffer vertices, texCoords;
+	ProgramObject *prog;
 	
 	void drawFixed(int x, int y);
 	void clone(const Text2D &t);

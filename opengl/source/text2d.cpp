@@ -3,12 +3,19 @@
 #include "transform.h"
 #include "glcontext.h"
 
-Font2D::Font2D(const char *name) : ptr(new Shared), lineSpacing(0)
+Font2D::Font2D(const char *filename) : lineSpacing(0)
 {
-	ptr->load(name);
+	loaded = ptr->load(filename);
 }
 
-Font2D::Shared::Shared()
+void Font2D::LoadFnt(const char *filename)
+{
+	if (ptr.GetRefCount() != 1)
+		ptr = my_shared_ptr<SharedTraits>::MakeNew();
+	loaded = ptr->load(filename);
+}
+
+shared_traits<Font2D>::shared_traits()
 {
 	numChars = numCharsets = 0;
 	charsets = NULL;
@@ -21,16 +28,16 @@ Font2D::Shared::Shared()
 	texWidth_inv = 0.0f;
 }
 
-Font2D::Shared::~Shared()
+shared_traits<Font2D>::~shared_traits()
 {
 	delete [] charsets;
 	delete [] charWidth;
 }
 
-void Font2D::Shared::load(const char *filename)
+bool shared_traits<Font2D>::load(const char *filename)
 {
 	ifstream file(filename);
-	if (!file) return;
+	if (!file) return false;
 
 	int curCharset = 0;
 	int cellWidth = 0, cellHeight = 0;
@@ -79,7 +86,7 @@ void Font2D::Shared::load(const char *filename)
 		ws(file);
 	}
 
-	if (!fontTexture.IsLoaded()) return;
+	if (!fontTexture.IsLoaded()) return false;
 
 	int tw = fontTexture.GetWidth();
 	int th = fontTexture.GetHeight();
@@ -95,10 +102,13 @@ void Font2D::Shared::load(const char *filename)
 		numCellsY = th / cellHeight;
 		numCellsY_inv = 1.0f / numCellsY;
 	}
+	return true;
 }
 
 int Font2D::CalcTextWidth(const wchar_t *text)
 {
+	if (!loaded) return 0;
+
 	int w = 0;
 	for (int i = 0; *text; i++, text++)
 	{
@@ -108,7 +118,7 @@ int Font2D::CalcTextWidth(const wchar_t *text)
 		bool found = false;
 		for (int j = 0; j < ptr->numCharsets; j++)
 		{
-			Font2D::Charset &c = ptr->charsets[j];
+			SharedTraits::Charset &c = ptr->charsets[j];
 			if (ch >= c.startChar && ch <= c.endChar)
 			{
 				index = ch - c.startChar + c.base;
@@ -188,10 +198,17 @@ Text2D::Text2D(GLRenderingContext *rc, const Font2D &font) :
 		rc->AddModule(module);
 	}
 	prog = module->prog;
+
+	vao.Bind();
+	vao.EnableVertexAttrib(AttribLocation::Vertex);
+	vao.EnableVertexAttrib(AttribLocation::TexCoord);
+	vertices.AttribPointer(AttribLocation::Vertex, 3, GL_FLOAT);
+	texCoords.AttribPointer(AttribLocation::TexCoord, 2, GL_FLOAT);
 }
 
 Text2D::Text2D(const Text2D &t) :
 	font(t.font),
+	vao(t.vao),
 	vertices(t.rc, GL_ARRAY_BUFFER),
 	texCoords(t.rc, GL_ARRAY_BUFFER)
 {
@@ -201,6 +218,7 @@ Text2D::Text2D(const Text2D &t) :
 Text2D &Text2D::operator=(const Text2D &t)
 {
 	font = t.font;
+	vao = t.vao;
 	clone(t);
 	return *this;
 }
@@ -218,6 +236,8 @@ void Text2D::clone(const Text2D &t)
 
 void Text2D::SetText(const wchar_t *text)
 {
+	if (!font.IsLoaded()) return;
+
 	numVerts = 6*wcslen(text);
 	Vector3f *verts = new Vector3f[numVerts];
 	Vector2f *texs = new Vector2f[numVerts];
@@ -239,7 +259,7 @@ void Text2D::SetText(const wchar_t *text)
 		bool found = false;
 		for (int j = 0; j < font->numCharsets; j++)
 		{
-			Font2D::Charset &c = font->charsets[j];
+			shared_traits<Font2D>::Charset &c = font->charsets[j];
 			if (ch >= c.startChar && ch <= c.endChar)
 			{
 				index = ch - c.startChar + c.base;
@@ -285,7 +305,6 @@ void Text2D::SetText(const wchar_t *text)
 void Text2D::drawFixed(int x, int y)
 {
 	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_BLEND);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
@@ -315,23 +334,10 @@ void Text2D::Draw(int x, int y)
 	rc->SetProjection(Ortho2D(0, viewport[2], viewport[3], 0));
 	rc->SetModelView(Translate((float)x, (float)y, 0));
 	
-	if (!GLEW_ARB_shader_objects)
-		drawFixed(x, y);
-	else
-	{
-		glEnableVertexAttribArray(AttribsLocations.Vertex);
-		glEnableVertexAttribArray(AttribsLocations.TexCoord);
-
-		prog->Use();
-		prog->Uniform("Color", 1, font.color.data);
-
-		vertices.AttribPointer(AttribsLocations.Vertex, 3, GL_FLOAT);
-		texCoords.AttribPointer(AttribsLocations.TexCoord, 2, GL_FLOAT);
-		vertices.DrawArrays(GL_TRIANGLES, 0, numVerts);
-
-		glDisableVertexAttribArray(AttribsLocations.Vertex);
-		glDisableVertexAttribArray(AttribsLocations.TexCoord);
-	}
+	vao.Bind();
+	prog->Use();
+	prog->Uniform("Color", 1, font.color.data);
+	vertices.DrawArrays(GL_TRIANGLES, 0, numVerts);
 	
 	glDisable(GL_BLEND);
 	rc->PopModelView();

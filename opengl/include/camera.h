@@ -15,8 +15,9 @@ public:
 	CameraType type;
 	Camera(CameraType type = CAM_LAND);
 
-	Matrix44f GetViewMatrix();
+	virtual Matrix44f GetViewMatrix();
 	void ApplyTransform(GLRenderingContext *rc);
+	void ResetTransform();
 
 	Vector3f GetPosition() { return t; }
 	void SetPosition(float x, float y, float z)
@@ -31,7 +32,7 @@ public:
 	void RotateX(float angle);
 	void RotateY(float angle);
 	void RotateZ(float angle);
-private:
+protected:
 	Vector3f x, y, z, t;
 	Matrix33f m;
 };

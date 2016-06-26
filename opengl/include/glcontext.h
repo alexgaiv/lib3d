@@ -2,17 +2,22 @@
 #define _GL_CONTEXT_H_
 
 #include "common.h"
+#include "sharedptr.h"
 #include "datatypes.h"
 #include "shader.h"
+#include "material.h"
+#include "texture.h"
 #include <stack>
 #include <list>
 #include <vector>
+#include <map>
 
 using namespace std;
 
 class GLRenderingContext;
-class _PO_Shared;
 class ProgramObject;
+class Texture2D;
+class MaterialLib;
 
 class GLRC_Module
 {
@@ -70,16 +75,18 @@ public:
 	void PushProjection() { projStack.push(projection); }
 	void PopProjection()  { SetProjection(projStack.top()); projStack.pop(); }
 
+	map<string, Texture2D> textures;
+	map<string, MaterialLib> materials;
+
 	void AddModule(GLRC_Module *module);
 	GLRC_Module *GetModule(const char *name);
 private:
 	friend class ProgramObject;
-	friend class _PO_Shared;
-	friend class BaseTexture;
+	friend class shared_traits<ProgramObject>;
 
 	HDC _hdc;
 	vector<GLRC_Module *> modules;
-	list<_PO_Shared *> shaders;
+	list<shared_traits<ProgramObject> *> shaders;
 	Matrix44f modelview, projection;
 	stack<Matrix44f> mvStack, projStack;
 
@@ -89,10 +96,10 @@ private:
 	bool mvpComputed;
 	bool normComputed;
 
-	void AttachProgram(_PO_Shared *prog) {
+	void AttachProgram(shared_traits<ProgramObject> *prog) {
 		shaders.push_back(prog);
 	}
-	void DetachProgram(_PO_Shared *prog) {
+	void DetachProgram(shared_traits<ProgramObject> *prog) {
 		shaders.remove(prog);
 	}
 	

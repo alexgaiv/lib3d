@@ -153,7 +153,7 @@ HGLRC GLRenderingContext::createContextAttrib(HDC hdc, const GLRenderingContextP
 
 void GLRenderingContext::set_mv(const Matrix44f &mat)
 {
-	list<_PO_Shared *>::iterator pi;
+	list<shared_traits<ProgramObject> *>::iterator pi;
 	for (pi = shaders.begin(); pi != shaders.end(); pi++)
 		(*pi)->fUpdateMV = true;
 	mvpComputed = normComputed = false;
@@ -161,7 +161,7 @@ void GLRenderingContext::set_mv(const Matrix44f &mat)
 
 void GLRenderingContext::set_proj(const Matrix44f &mat)
 {
-	list<_PO_Shared *>::iterator pi;
+	list<shared_traits<ProgramObject> *>::iterator pi;
 	for (pi = shaders.begin(); pi != shaders.end(); pi++)
 		(*pi)->fUpdateProj = true;
 	mvpComputed = false;
