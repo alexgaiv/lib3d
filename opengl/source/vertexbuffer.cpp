@@ -1,5 +1,21 @@
 #include "vertexbuffer.h"
 #include "shader.h"
+#include "glcontext.h"
+
+void VertexArrayObject::EnableAttribs(int flags)
+{
+	Bind();
+	if (flags & VA_XYZ)
+		glEnableVertexAttribArray(AttribLocation::Vertex);
+	if (flags & VA_NORMAL)
+		glEnableVertexAttribArray(AttribLocation::Normal);
+	if (flags & VA_TEXCOORD)
+		glEnableVertexAttribArray(AttribLocation::TexCoord);
+	if (flags & VA_TANGENTS_BINORMALS) {
+		glEnableVertexAttribArray(AttribLocation::Tangent);
+		glEnableVertexAttribArray(AttribLocation::Binormal);
+	}
+}
 
 VertexBuffer::VertexBuffer(GLRenderingContext *rc, GLenum target)
 	: rc(rc), target(target)

@@ -1,7 +1,12 @@
 #ifndef _DATATYPES_H_
 #define _DATATYPES_H_
 
-#include "common.h"
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#define M_PIf 3.141592653589f
+#define DEG_TO_RAD(a) ((a) * M_PIf / 180.0f)
+#define RAD_TO_DEG(a) ((a) / M_PIf * 180.0f)
 
 template<class T>
 inline bool CmpReal(T a, T b, T eps = T(0.0001)) {

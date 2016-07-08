@@ -1,10 +1,11 @@
 #ifndef _TEXT_2D_
 #define _TEXT_2D_
 
+#include "sharedptr.h"
 #include "vertexbuffer.h"
 #include "texture.h"
+#include "shader.h"
 #include "glcontext.h"
-#include "sharedptr.h"
 
 class Text2D;
 class Font2D;

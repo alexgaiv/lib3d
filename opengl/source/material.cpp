@@ -1,26 +1,29 @@
 #include "material.h"
+#include "glcontext.h"
 #include <utility>
 
-Texture2D MaterialLib::getTexture(const string &name)
+Texture2D MaterialLoader::getTexture(const string &name, Dictionary<Texture2D> &textures)
 {
-	typedef std::map<string, Texture2D> tex_map;
+	Texture2D *tex = textures.GetItem(name.c_str());
+	if (tex) return *tex;
 
-	tex_map::iterator i = rc->textures.find(name);
-	if (i != rc->textures.end()) {
-		return i->second;
-	}
-
-	Texture2D tex(name.c_str());
-	rc->textures.insert(make_pair(name, tex));
-	return tex;
+	Texture2D t(name.c_str());
+	t.SetFilters(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+	t.BuildMipmaps();
+	return textures.AddItem(name.c_str(), t);
 }
 
-bool MaterialLib::LoadMtl(const char *filename)
+bool MaterialLoader::LoadMtl(const char *filename, Dictionary<Material> &materials)
+{
+	Dictionary<Texture2D> textures;
+	return LoadMtl(filename, materials, textures);
+}
+
+bool MaterialLoader::LoadMtl(const char *filename, Dictionary<Material> &materials, Dictionary<Texture2D> &textures)
 {
 	ifstream file(filename);
 	if (!file) return false;
 
-	map.clear();
 	Material *current = NULL;
 
 	string line;
@@ -34,9 +37,9 @@ bool MaterialLib::LoadMtl(const char *filename)
 		if (i == -1) continue;
 		string prefix = line.substr(0, i);
 		line = line.substr(i + 1);
-		
+
 		if (prefix == "newmtl") {
-			current = &(map[line] = Material());
+			current = &materials.AddItem(line.c_str(), Material());
 		}
 		else if (prefix == "Ns") {
 			sscanf_s(line.c_str(), "%f", &current->specularIntensity);
@@ -54,19 +57,23 @@ bool MaterialLib::LoadMtl(const char *filename)
 			sscanf_s(line.c_str(), "%f %f %f", &c.r, &c.g, &c.b);
 		}
 		else if (prefix == "map_Kd") {
-			current->diffuseMap = getTexture(line);
+			current->diffuseMap = getTexture(line, textures);
 		}
 		else if (prefix == "map_Ks") {
-			current->specularMap = getTexture(line);
-			current->specularMap->SetTextureUnit(GL_TEXTURE3);
+			current->specularMap = getTexture(line, textures);
+			current->specularMap->SetTextureUnit(GL_TEXTURE2);
 		}
 		else if (prefix == "map_Ns") {
-			current->specularIntensityMap = getTexture(line);
-			current->specularIntensityMap->SetTextureUnit(GL_TEXTURE2);
+			current->specularIntensityMap = getTexture(line, textures);
+			current->specularIntensityMap->SetTextureUnit(GL_TEXTURE3);
+		}
+		else if (prefix == "map_d") {
+			current->opacityMask = getTexture(line, textures);
+			current->opacityMask->SetTextureUnit(GL_TEXTURE4);
 		}
 		else if (prefix == "map_bump" || prefix == "bump") {
 			if (!current->normalMap) {
-				current->normalMap = getTexture(line);
+				current->normalMap = getTexture(line, textures);
 				current->normalMap->SetTextureUnit(GL_TEXTURE1);
 			}
 		}

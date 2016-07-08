@@ -1,23 +1,21 @@
 #ifndef _GL_CONTEXT_H_
 #define _GL_CONTEXT_H_
 
+#include <vector>
+#include <stack>
+#include <list>
+#include <map>
 #include "common.h"
 #include "sharedptr.h"
 #include "datatypes.h"
+#include "texture.h"
 #include "shader.h"
 #include "material.h"
-#include "texture.h"
-#include <stack>
-#include <list>
-#include <vector>
-#include <map>
 
 using namespace std;
 
 class GLRenderingContext;
 class ProgramObject;
-class Texture2D;
-class MaterialLib;
 
 class GLRC_Module
 {
@@ -75,8 +73,8 @@ public:
 	void PushProjection() { projStack.push(projection); }
 	void PopProjection()  { SetProjection(projStack.top()); projStack.pop(); }
 
-	map<string, Texture2D> textures;
-	map<string, MaterialLib> materials;
+	LibCollection<Texture2D> textures;
+	LibCollection<Material> materials;
 
 	void AddModule(GLRC_Module *module);
 	GLRC_Module *GetModule(const char *name);

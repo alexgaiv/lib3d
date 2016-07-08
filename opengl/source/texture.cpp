@@ -1,6 +1,4 @@
 #include "texture.h"
-#include "glcontext.h"
-#include <new>
 
 BaseTexture::BaseTexture(GLenum target, GLenum unit, GLuint id)
 	: target(target), textureUnit(unit)

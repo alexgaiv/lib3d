@@ -1,4 +1,4 @@
-#include "BaseWindow.h"
+#include "basewindow.h"
 
 shared_traits<BaseWindow>::~shared_traits() {
 	if (IsWindow(hwnd)) {

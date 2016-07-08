@@ -61,6 +61,7 @@ class Shared
 {
 public:
 	Shared() : ptr(new SharedTraits) { }
+	int GetRefCount() const { return ptr->GetRefCount(); }
 protected:
 	typedef shared_traits<T> SharedTraits;
 	my_shared_ptr<SharedTraits> ptr;

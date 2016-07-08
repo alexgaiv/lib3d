@@ -1,10 +1,10 @@
 #ifndef _SKYBOX_H_
 #define _SKYBOX_H_
 
-#include "glcontext.h"
 #include "vertexbuffer.h"
 #include "texture.h"
 #include "shader.h"
+#include "glcontext.h"
 
 class Skybox
 {

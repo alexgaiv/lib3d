@@ -1,7 +1,6 @@
 #include "text2d.h"
 #include "datatypes.h"
 #include "transform.h"
-#include "glcontext.h"
 
 Font2D::Font2D(const char *filename) : lineSpacing(0)
 {

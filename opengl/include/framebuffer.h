@@ -2,8 +2,8 @@
 #define _FRAMEBUFFER_H
 
 #include "common.h"
-#include "texture.h"
 #include "sharedptr.h"
+#include "texture.h"
 
 class Renderbuffer;
 class Framebuffer;

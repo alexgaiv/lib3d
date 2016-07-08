@@ -1,10 +1,9 @@
 #ifndef _VIEWER3D_
 #define _VIEWER3D_
 
-#include "common.h"
-#include "glcontext.h"
 #include "datatypes.h"
 #include "quaternion.h"
+#include "glcontext.h"
 
 class TrackballCamera
 {

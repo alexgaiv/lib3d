@@ -1,9 +1,35 @@
 #include "modelloader.h"
+#include "material.h"
 #include <fstream>
 
+#define RAW_FILE_SIGNATURE 0x00574152
+#define RAW_HAS_NORMALS 1
+#define RAW_HAS_TEXCOORDS 2
+
 #pragma pack(push, 1)
-struct MeshDesc
+struct RAWSTRING
 {
+	DWORD offset;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct RAWHEADER
+{
+	DWORD signature;
+	DWORD numVertices;
+	DWORD numIndices;
+	DWORD numMeshes;
+	DWORD stringTableSize;
+	DWORD flags;
+	RAWSTRING materialLib;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct RAWMESHDESC
+{
+	RAWSTRING materialName;
 	int firstIndex;
 	Vector3f vmin;
 	Vector3f vmax;
@@ -23,18 +49,81 @@ void ModelLoader::read_num(const string &line, char &c, int &i, int &n)
 	if (neg) n = -n;
 }
 
-bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool separateMeshes)
+void ModelLoader::setupVao(vector<Mesh> &meshes, bool computeTangents)
+{
+	Mesh &m0 = meshes[0];
+
+	int attribs = VA_XYZ;
+	m0.vao.Bind();
+	vertices->AttribPointer(AttribLocation::Vertex, 3, GL_FLOAT);
+	if (normals) {
+		attribs |= VA_NORMAL;
+		normals->AttribPointer(AttribLocation::Normal, 3, GL_FLOAT);
+	}
+	if (texCoords) {
+		attribs |= VA_TEXCOORD;
+		texCoords->AttribPointer(AttribLocation::TexCoord, 2, GL_FLOAT);
+	}
+	m0.vao.EnableAttribs(attribs);
+
+	if (!computeTangents) return;
+
+	if (meshes.size() == 1)
+	{
+		m0.RecalcTangents();
+		m0.vao.Bind();
+		m0.vao.EnableVertexAttrib(AttribLocation::Tangent);
+		m0.vao.EnableVertexAttrib(AttribLocation::Binormal);
+		m0.tangents->AttribPointer(AttribLocation::Tangent, 3, GL_FLOAT);
+		m0.binormals->AttribPointer(AttribLocation::Binormal, 3, GL_FLOAT);
+	}
+	else
+	{
+		VertexBuffer tangents(rc, GL_ARRAY_BUFFER);
+		VertexBuffer binormals(rc, GL_ARRAY_BUFFER);
+		VertexArrayObject vao_normalMap;
+
+		vao_normalMap.Bind();
+		vao_normalMap.EnableAttribs(attribs | VA_TANGENTS_BINORMALS);
+		vertices->AttribPointer(AttribLocation::Vertex, 3, GL_FLOAT);
+		tangents.AttribPointer(AttribLocation::Tangent, 3, GL_FLOAT);
+		binormals.AttribPointer(AttribLocation::Binormal, 3, GL_FLOAT);
+		if (normals)
+			normals->AttribPointer(AttribLocation::Normal, 3, GL_FLOAT);
+		if (texCoords)
+			texCoords->AttribPointer(AttribLocation::TexCoord, 2, GL_FLOAT);
+
+		int numVertices = vertices->GetSize() / sizeof(Vector3f);
+		Vector3f *data = new Vector3f[numVertices];
+		int dataSize = numVertices*sizeof(Vector3f);
+		ZeroMemory(data, dataSize);
+		tangents.SetData(dataSize, data, GL_STATIC_DRAW);
+		binormals.SetData(dataSize, data, GL_STATIC_DRAW);
+		delete[] data;
+
+		for (int i = 0, s = meshes.size(); i < s; i++)
+		{
+			Mesh &m = meshes[i];
+			m.tangents = tangents;
+			m.binormals = binormals;
+			if (m.material.normalMap) {
+				m.vao = vao_normalMap;
+				m.RecalcTangents();
+			}
+		}
+	}
+}
+
+bool ModelLoader::loadObj(const char *filename, vector<Mesh> &meshes, bool separateMeshes)
 {
 	ifstream file(filename);
 	if (!file) return false;
 
-	MaterialLib *mtlLib = NULL;
+	Mesh mesh(rc);
+	Dictionary<Material> *mtlLib = NULL;
 	Material *curMaterial = NULL;
-
-	VertexBuffer *vertices = NULL;
-	VertexBuffer *indices = NULL;
-	VertexBuffer *texCoords = NULL;
-	VertexBuffer *normals = NULL;
+	string curMaterialName = "", lastMaterialName = "";
+	bool computeTangents = false;
 
 	Vector3f v;
 	Vector2f tc;
@@ -61,18 +150,39 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 		line = line.substr(i + 1);
 
 		if (prefix == "mtllib") {
-			map<string, MaterialLib>::iterator i = rc->materials.find(line);
-			if (i != rc->materials.end()) {
-				mtlLib = &i->second;
-			}
-			else {
-				mtlLib = new MaterialLib(rc);
-				mtlLib->LoadMtl(line.c_str());
-				rc->materials.insert(make_pair(line, *mtlLib));
+			mtlLib = rc->materials.GetLib(line.c_str());
+			if (!mtlLib) {
+				Dictionary<Material> materialLib;
+				Dictionary<Texture2D> &textureLib = rc->textures.GetDefaultLib();
+				MaterialLoader().LoadMtl(line.c_str(), materialLib, textureLib);
+				mtlLib = &rc->materials.AddLib(line.c_str(), materialLib);
 			}
 		}
-		else if (prefix == "usemtl") {
-			curMaterial = mtlLib->GetMaterial(line.c_str());
+		else if (prefix == "usemtl")
+		{
+			if (curMaterialName != lastMaterialName)
+			{
+				if (curMaterial) {
+					mesh.material = *curMaterial;
+					lastMaterialName = curMaterialName;
+				}
+				mesh.SetFirstIndex(lastIndex);
+				mesh.SetIndexCount(iverts.size() - lastIndex);
+				mesh.boundingBox.vmin = vmin;
+				mesh.boundingBox.vmax = vmax;
+				mesh.boundingSphere.center = (vmax + vmin) / 2;
+				mesh.boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
+				meshes.push_back(mesh);
+
+				lastIndex = iverts.size();
+				first_vert = true;
+			}
+
+			curMaterial = mtlLib->GetItem(line.c_str());
+			if (curMaterial) {
+				curMaterialName = line;
+				if (curMaterial->normalMap) computeTangents = true;
+			}
 		}
 		else if (prefix == "o" || prefix == "g")
 		{
@@ -81,18 +191,19 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 			if (first_mesh)
 				first_mesh = false;
 			else {
-				Mesh *m = new Mesh(rc);
-				if (curMaterial) m->material = Material(*curMaterial);
-				m->SetFirstIndex(lastIndex);
-				m->SetIndicesCount(iverts.size() - lastIndex);
+				if (curMaterial) {
+					mesh.material = *curMaterial;
+					lastMaterialName = curMaterialName;
+				}
+				mesh.SetFirstIndex(lastIndex);
+				mesh.SetIndexCount(iverts.size() - lastIndex);
+				mesh.boundingBox.vmin = vmin;
+				mesh.boundingBox.vmax = vmax;
+				mesh.boundingSphere.center = (vmax + vmin) / 2;
+				mesh.boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
+				meshes.push_back(mesh);
+
 				lastIndex = iverts.size();
-				meshes.push_back(m);
-
-				m->boundingBox.vmin = vmin;
-				m->boundingBox.vmax = vmax;
-				m->boundingSphere.center = (vmax + vmin) / 2;
-				m->boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
-
 				first_vert = true;
 			}
 		}
@@ -127,11 +238,11 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 			char c = 0;
 			int i = 0;
 			int n = 0;
-			int vertsCount = verts.size();
+			int numVerts = verts.size();
 
 			for (int k = 0; k < 3; k++) {
 				read_num(line, c, i, n);
-				iverts.push_back(n > 0 ? n - 1 : vertsCount + n);
+				iverts.push_back(n > 0 ? n - 1 : numVerts + n);
 
 				if (c == '/')
 				{
@@ -140,12 +251,12 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 					read_num(line, c, i, n);
 
 					if (skip)
-						inorms.push_back(n > 0 ? n - 1 : vertsCount + n);
+						inorms.push_back(n > 0 ? n - 1 : numVerts + n);
 					else {
-						itexs.push_back(n > 0 ? n - 1 : vertsCount + n);
+						itexs.push_back(n > 0 ? n - 1 : numVerts + n);
 						if (c == '/') {
 							read_num(line, c, i, n);
-							inorms.push_back(n > 0 ? n - 1 : vertsCount + n);
+							inorms.push_back(n > 0 ? n - 1 : numVerts + n);
 						}
 					}
 				}
@@ -153,22 +264,22 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 		}
 	}
 
+	if (curMaterial) mesh.material = *curMaterial;
+	mesh.SetFirstIndex(lastIndex);
+	mesh.SetIndexCount(iverts.size() - lastIndex);
+	mesh.boundingBox.vmin = vmin;
+	mesh.boundingBox.vmax = vmax;
+	mesh.boundingSphere.center = (vmax + vmin) / 2;
+	mesh.boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
+	meshes.push_back(mesh);
+
 	file.close();
 
-	Mesh *m = new Mesh(rc);
-	if (curMaterial) m->material = Material(*curMaterial);
-	m->SetFirstIndex(lastIndex);
-	m->SetIndicesCount(iverts.size() - lastIndex);
-	meshes.push_back(m);
+	if (meshes.size() == 1) meshes[0].SetIndexCount(-1);
 
-	m->boundingBox.vmin = vmin;
-	m->boundingBox.vmax = vmax;
-	m->boundingSphere.center = (vmax + vmin) / 2;
-	m->boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
-
-	int verticesCount = verts.size();
-	if (verticesCount == 0) return false;
-	int indicesCount = iverts.size();
+	int numVertices = verts.size();
+	if (numVertices == 0) return false;
+	int numIndices = iverts.size();
 	bool hasNormals = norms.size() != 0;
 	bool hasTexCoords = texs.size() != 0;
 
@@ -178,18 +289,18 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 		vector<Vector2f> texs_new;
 
 		if (hasNormals) {
-			norms_new.resize(verticesCount);
-			memset(&norms_new[0], -1, verticesCount * sizeof(Vector3f));
+			norms_new.resize(numVertices);
+			memset(&norms_new[0], -1, numVertices * sizeof(Vector3f));
 		}
 		if (hasTexCoords) {
-			texs_new.resize(verticesCount);
-			memset(&texs_new[0], -1, verticesCount * sizeof(Vector2f));
+			texs_new.resize(numVertices);
+			memset(&texs_new[0], -1, numVertices * sizeof(Vector2f));
 		}
 
 		for (int i = 0, k = iverts.size(); i < k; i++) {
 			int iv = iverts[i];
-			int it = hasTexCoords ? itexs[i] : 0;
 			int in = hasNormals ? inorms[i] : 0;
+			int it = hasTexCoords ? itexs[i] : 0;
 
 			if ((!hasNormals || *(int *)&norms_new[iv].x == -1) &&
 				(!hasTexCoords || *(int *)&texs_new[iv].x == -1))
@@ -198,10 +309,10 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 				if (hasTexCoords) texs_new[iv] = texs[it];
 			}
 			else if (hasNormals && norms_new[iv] != norms[in] ||
-						hasTexCoords && texs_new[iv] != texs[it])
+					hasTexCoords && texs_new[iv] != texs[it])
 			{
  				int same = -1;
-				for (int j = verticesCount, n = verts.size(); j < n; j++)
+				for (int j = numVertices, n = verts.size(); j < n; j++)
 				{
 					if (verts[j] == verts[iv] &&
 						(!hasNormals || norms_new[j] == norms[in]) &&
@@ -221,163 +332,179 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh *> &meshes, bool sep
 				}
 			}
 		}
-
-		verticesCount = verts.size();
+		numVertices = verts.size();
 
 		if (hasNormals) {
-			normals = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+			normals = VertexBuffer(rc, GL_ARRAY_BUFFER);
 			normals->SetData(norms_new.size()*sizeof(Vector3f), norms_new.data(), GL_STATIC_DRAW);
 		}
 		if (hasTexCoords) {
-			texCoords = new VertexBuffer(rc, GL_ARRAY_BUFFER);
+			texCoords = VertexBuffer(rc, GL_ARRAY_BUFFER);
 			texCoords->SetData(texs_new.size()*sizeof(Vector2f), texs_new.data(), GL_STATIC_DRAW);
 		}
 	}
 
-	vertices = new VertexBuffer(rc, GL_ARRAY_BUFFER);
-	indices = new VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
-	vertices->SetData(verticesCount*sizeof(Vector3f), verts.data(), GL_STATIC_DRAW);
-	indices->SetData(indicesCount*sizeof(int), iverts.data(), GL_STATIC_DRAW);
+	vertices = VertexBuffer(rc, GL_ARRAY_BUFFER);
+	indices = VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
+	vertices->SetData(numVertices*sizeof(Vector3f), verts.data(), GL_STATIC_DRAW);
+	indices->SetData(numIndices*sizeof(int), iverts.data(), GL_STATIC_DRAW);
 
 	for (int i = 0, s = meshes.size(); i < s; i++)
 	{
-		Mesh *mesh = meshes[i];
-		int format = VF_XYZ;
-
-		mesh->vertices = *vertices;
-		mesh->indices = *indices;
-		if (normals) {
-			mesh->normals = *normals;
-			format |= VF_NORMAL;
-		}
-		if (texCoords) {
-			mesh->texCoords = *texCoords;
-			format |= VF_TEXCOORD;
-		}
-
-		mesh->SetVertexFormat(format);
+		Mesh &m = meshes[i];
+		m.vertices = vertices;
+		m.indices = indices;
+		m.normals = normals;
+		m.texCoords = texCoords;
 	}
 
-	if (meshes.size() == 1) meshes[0]->SetIndicesCount(-1);
+	setupVao(meshes, computeTangents);
 
-	delete vertices;
-	delete indices;
-	delete normals;
-	delete texCoords;
+	vertices = indices = texCoords = normals = NULL;
 	return true;
 }
 
-bool ModelLoader::loadRaw(const char *filename, vector<Mesh *> &meshes, bool separateMeshes)
+bool ModelLoader::loadRaw(const char *filename, vector<Mesh> &meshes, bool separateMeshes)
 {
 	HANDLE hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) return false;
 
 	DWORD bytesRead = 0;
+	RAWHEADER rawHeader = { };
+	
+	ReadFile(hFile, &rawHeader, sizeof(RAWHEADER), &bytesRead, NULL);
 
-	BYTE signature[4] = { };
-	ReadFile(hFile, signature, 3, &bytesRead, NULL);
-	if (*(int *)signature != 0x00574152) return false;
+	if (rawHeader.signature != RAW_FILE_SIGNATURE) {
+		CloseHandle(hFile);
+		return false;
+	}
 
-	int verticesCount = 0;
-	int indicesCount = 0;
-	bool hasNormals = false;
-	bool hasTexCoords = false;
-	int numMeshes = 0;
+	int numVertices = rawHeader.numVertices;
+	int numIndices = rawHeader.numIndices;
+	int numMeshes = rawHeader.numMeshes;
+	bool hasNormals = (rawHeader.flags & RAW_HAS_NORMALS) != 0;
+	bool hasTexCoords = (rawHeader.flags & RAW_HAS_TEXCOORDS) != 0;
 
-	ReadFile(hFile, &verticesCount, sizeof(int), &bytesRead, NULL);
-	ReadFile(hFile, &indicesCount, sizeof(int), &bytesRead, NULL);
-	ReadFile(hFile, &hasNormals, 1, &bytesRead, NULL);
-	ReadFile(hFile, &hasTexCoords, 1, &bytesRead, NULL);
-	ReadFile(hFile, &numMeshes, sizeof(int), &bytesRead, NULL);
+	Dictionary<Material> *mtlLib = NULL;
+	char *stringTable = NULL;
+	RAWMESHDESC *meshDesc = new RAWMESHDESC[numMeshes];
+	Vector3f *vertexData = new Vector3f[numVertices];
+	UINT *indexData = new UINT[numIndices];
 
-	Mesh mm(rc);
-	mm.vertices = VertexBuffer(rc, GL_ARRAY_BUFFER);
-	mm.indices = VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
-	if (hasNormals) mm.normals = VertexBuffer(rc, GL_ARRAY_BUFFER);
-	if (hasTexCoords) mm.texCoords = VertexBuffer(rc, GL_ARRAY_BUFFER);
+	if (rawHeader.stringTableSize != 0) {
+		stringTable = new char[rawHeader.stringTableSize];
+		ReadFile(hFile, stringTable, rawHeader.stringTableSize, &bytesRead, NULL);
 
-	MeshDesc *meshDesc = new MeshDesc[numMeshes];
-	ReadFile(hFile, meshDesc, numMeshes*sizeof(MeshDesc), &bytesRead, NULL);
+		if (rawHeader.materialLib.offset != (DWORD)-1)
+		{
+			char *libName = stringTable + rawHeader.materialLib.offset;
+			mtlLib = rc->materials.GetLib(libName);
+			if (!mtlLib) {
+				Dictionary<Material> materialLib;
+				Dictionary<Texture2D> &textureLib = rc->textures.GetDefaultLib();
+				MaterialLoader().LoadMtl(libName, materialLib, textureLib);
+				mtlLib = &rc->materials.AddLib(libName, materialLib);
+			}
+		}
+	}
+	
+	ReadFile(hFile, meshDesc, numMeshes*sizeof(RAWMESHDESC), &bytesRead, NULL);
+	ReadFile(hFile, vertexData, numVertices*sizeof(Vector3f), &bytesRead, NULL);
+	ReadFile(hFile, indexData, numIndices*sizeof(UINT), &bytesRead, NULL);
 
+	vertices = VertexBuffer(rc, GL_ARRAY_BUFFER);
+	indices = VertexBuffer(rc, GL_ELEMENT_ARRAY_BUFFER);
+	vertices->SetData(numVertices*sizeof(Vector3f), vertexData, GL_STATIC_DRAW);
+	indices->SetData(numIndices*sizeof(UINT), indexData, GL_STATIC_DRAW);
+
+	if (hasNormals)
+	{
+		normals = VertexBuffer(rc, GL_ARRAY_BUFFER);
+		Vector3f *norms = new Vector3f[numVertices];
+		ReadFile(hFile, norms, numVertices*sizeof(Vector3f), &bytesRead, NULL);
+		normals->SetData(numVertices*sizeof(Vector3f), norms, GL_STATIC_DRAW);
+		delete[] norms;
+	}
+
+	if (hasTexCoords)
+	{
+		texCoords = VertexBuffer(rc, GL_ARRAY_BUFFER);
+		Vector2f *texs = new Vector2f[numVertices];
+		ReadFile(hFile, texs, numVertices*sizeof(Vector2f), &bytesRead, NULL);
+		texCoords->SetData(numVertices*sizeof(Vector2f), texs, GL_STATIC_DRAW);
+		delete[] texs;
+	}
+
+	CloseHandle(hFile);
+
+	Mesh mesh(rc);
+	mesh.vertices = vertices;
+	mesh.indices = indices;
+	mesh.normals = normals;
+	mesh.texCoords = texCoords;
+
+	bool computeTangents = false;
 	for (int i = 0; i < numMeshes; i++)
 	{
-		Mesh *m = new Mesh(mm);
-		meshes.push_back(m);
+		if (mtlLib) {
+			char *materialName = stringTable + meshDesc[i].materialName.offset;
+			Material *material = mtlLib->GetItem(materialName);
+			if (material) {
+				mesh.material = *material;
+				if (material->normalMap) computeTangents = true;
+			}
+			else mesh.material = Material();
+		}
 
-		m->SetFirstIndex(meshDesc[i].firstIndex);
+		mesh.SetFirstIndex(meshDesc[i].firstIndex);
 		if (numMeshes != 1) {
-			int next = i == numMeshes - 1 ? indicesCount : meshDesc[i + 1].firstIndex;
-			m->SetIndicesCount(next - meshDesc[i].firstIndex);
+			int next = i == numMeshes - 1 ? numIndices : meshDesc[i + 1].firstIndex;
+			mesh.SetIndexCount(next - meshDesc[i].firstIndex);
 		}
 
 		Vector3f &vmin = meshDesc[i].vmin;
 		Vector3f &vmax = meshDesc[i].vmax;
 
-		m->boundingBox.vmin = vmin;
-		m->boundingBox.vmax = vmax;
-		m->boundingSphere.center = (vmax + vmin) / 2;
-		m->boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
+		mesh.boundingBox.vmin = vmin;
+		mesh.boundingBox.vmax = vmax;
+		mesh.boundingSphere.center = (vmax + vmin) / 2;
+		mesh.boundingSphere.radius = max(max(vmax.x - vmin.x, vmax.y - vmin.y), vmax.z - vmin.z);
 
-		int format = VF_XYZ;
-		if (hasNormals) format |= VF_NORMAL;
-		if (hasTexCoords) format |= VF_TEXCOORD;
-		m->SetVertexFormat(format);
+		meshes.push_back(mesh);
 	}
+
+	setupVao(meshes, computeTangents);
+
+	vertices = indices = normals = texCoords = NULL;
+	delete [] stringTable;
 	delete [] meshDesc;
-
-	Vector3f *verts = new Vector3f[verticesCount];
-	UINT *indx = new UINT[indicesCount];
-	ReadFile(hFile, verts, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
-	ReadFile(hFile, indx, indicesCount*sizeof(UINT), &bytesRead, NULL);
-	
-	mm.vertices->SetData(verticesCount*sizeof(Vector3f), verts, GL_STATIC_DRAW);
-	mm.indices->SetData(indicesCount*sizeof(UINT), indx, GL_STATIC_DRAW);
-
-	delete [] verts;
-	delete [] indx;
-
-	if (hasNormals)
-	{
-		Vector3f *norms = new Vector3f[verticesCount];
-		ReadFile(hFile, norms, verticesCount*sizeof(Vector3f), &bytesRead, NULL);
-		mm.normals->SetData(verticesCount*sizeof(Vector3f), norms, GL_STATIC_DRAW);
-		delete [] norms;
-	}
-
-	if (hasTexCoords)
-	{
-		Vector2f *texs = new Vector2f[verticesCount];
-		ReadFile(hFile, texs, verticesCount*sizeof(Vector2f), &bytesRead, NULL);
-		mm.texCoords->SetData(verticesCount*sizeof(Vector2f), texs, GL_STATIC_DRAW);
-		delete [] texs;
-	}
-
-	CloseHandle(hFile);
+	delete [] vertexData;
+	delete [] indexData;
 	return true;
 }
 
 bool ModelLoader::LoadObj(const char *filename, Mesh &mesh)
 {
-	vector<Mesh *> tmp;
+	vector<Mesh> tmp;
 	bool result = loadObj(filename, tmp, false);
-	if (result) mesh = *tmp[0];
+	if (result) mesh = tmp[0];
 	return result;
 }
 
-bool ModelLoader::LoadObj(const char *filename, vector<Mesh *> &meshes)
+bool ModelLoader::LoadObj(const char *filename, vector<Mesh> &meshes)
 {
 	return loadObj(filename, meshes, true);
 }
 
 bool ModelLoader::LoadRaw(const char *filename, Mesh &mesh)
 {
-	vector<Mesh *> tmp;
+	vector<Mesh> tmp;
 	bool result = loadRaw(filename, tmp, false);
-	if (result) mesh = *tmp[0];
+	if (result) mesh = tmp[0];
 	return result;
 }
 
-bool ModelLoader::LoadRaw(const char *filename, vector<Mesh *> &meshes)
+bool ModelLoader::LoadRaw(const char *filename, vector<Mesh> &meshes)
 {
 	return loadRaw(filename, meshes, true);
 }

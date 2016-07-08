@@ -1,4 +1,5 @@
 #include "shader.h"
+#include "glcontext.h"
 #include <strsafe.h>
 
 Shader::Shader(GLenum type) {
@@ -155,7 +156,7 @@ void ProgramObject::updateMatrices()
 
 void ProgramObject::Use()
 {
-	if (rc->curProgram == 0 || rc->curProgram->ptr->handle != ptr->handle) {
+	if (!rc->curProgram || rc->curProgram->ptr->handle != ptr->handle) {
 		rc->curProgram = this;
 		glUseProgram(ptr->handle);
 	}

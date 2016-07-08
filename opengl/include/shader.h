@@ -1,14 +1,13 @@
 #ifndef _SHADER_H_
 #define _SHADER_H_
 
-#include "common.h"
-#include "datatypes.h"
-#include "glcontext.h"
-#include "vertexbuffer.h"
-#include "sharedptr.h"
-#include <fstream>
 #include <vector>
 #include <string>
+#include <fstream>
+#include "common.h"
+#include "sharedptr.h"
+#include "datatypes.h"
+#include "vertexbuffer.h"
 
 class GLRenderingContext;
 class Shader;

@@ -2,12 +2,19 @@
 #define _VERTEX_BUFFER_H
 
 #include "common.h"
-#include "glcontext.h"
 #include "sharedptr.h"
 
 class GLRenderingContext;
 class VertexBuffer;
 class VertexArrayObject;
+
+enum VertexAttribute
+{
+	VA_XYZ = 1,
+	VA_NORMAL = 2,
+	VA_TEXCOORD = 4,
+	VA_TANGENTS_BINORMALS = 8
+};
 
 template<>
 class shared_traits<VertexArrayObject>
@@ -24,6 +31,8 @@ public:
 	GLuint Handle() const { return ptr->vao; }
 	void Bind() { glBindVertexArray(ptr->vao); }
 	void Unbind() { glBindVertexArray(0); }
+
+	void EnableAttribs(int vaFlags);
 	void EnableVertexAttrib(int index) { glEnableVertexAttribArray(index); }
 	void DisableVertexAttrib(int index) { glDisableVertexAttribArray(index); }
 	void VertexAttribDivisor(int index, int divisor) { glVertexAttribDivisor(index, divisor); }

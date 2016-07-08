@@ -75,7 +75,7 @@ bool Image::LoadTga(const char *filename)
 		height = tgaHeader.height;
 
 		int rowSize = imageSize / height;
-		if ((~tgaHeader.descriptor & 0x10)) {
+		if ((~tgaHeader.descriptor & 0x20)) {
 			BYTE *tmp = new BYTE[rowSize];
 			for (int i = 0; i < height / 2; i++)
 			{
@@ -84,21 +84,6 @@ bool Image::LoadTga(const char *filename)
 				memcpy(tmp, r1, rowSize);
 				memcpy(r1, r2, rowSize);
 				memcpy(r2, tmp, rowSize);
-			}
-			delete [] tmp;
-		}
-
-		if (tgaHeader.descriptor & 8) {
-			int components = tgaHeader.depth / 8;
-			BYTE *tmp = new BYTE[components];
-			for (int i = 0; i < height; i++) {
-				for (int j = 0; j < width / 2; j++) {
-					BYTE *c1 = &data[rowSize*i + j*components];
-					BYTE *c2 = &data[rowSize*i + (rowSize - (j+1)*components)];
-					memcpy(tmp, c1, components);
-					memcpy(c1, c2, components);
-					memcpy(c2, tmp, components);
-				}
 			}
 			delete [] tmp;
 		}

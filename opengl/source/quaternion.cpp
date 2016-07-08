@@ -1,5 +1,4 @@
 #include "quaternion.h"
-#include "common.h"
 
 Quaternion::Quaternion() {
 	x = y = z = 0.0f;

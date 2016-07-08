@@ -17,6 +17,17 @@ public:
 
 	~Nullable() { delete val; }
 
+	bool operator==(const Nullable &obj) const {
+		if (val == obj.val) return true;
+		if (val && obj.val)
+			return *val == *obj.val;
+		return false;
+	}
+
+	bool operator!=(const Nullable &obj) const {
+		return !operator==(obj);
+	}
+
 	Nullable &operator=(const Nullable &obj) {
 		delete val;
 		val = obj.val ? new T(*obj.val) : 0;

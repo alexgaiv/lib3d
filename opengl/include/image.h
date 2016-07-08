@@ -1,10 +1,10 @@
 #ifndef _IAMGE_H_
 #define _IAMGE_H_
 
-#include "common.h"
+#include <new>
+#include <Windows.h>
 #include "sharedptr.h"
 #include "datatypes.h"
-#include <new>
 
 class Image;
 

@@ -1,4 +1,5 @@
 #include "trackball.h"
+#include "common.h"
 #include "transform.h"
 
 TrackballCamera::TrackballCamera(GLRenderingContext *rc)

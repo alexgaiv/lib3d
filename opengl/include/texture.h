@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "datatypes.h"
-#include "glcontext.h"
 #include "sharedptr.h"
 #include "image.h"
 

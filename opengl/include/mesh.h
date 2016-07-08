@@ -1,18 +1,18 @@
 #ifndef _MESH_H_
 #define _MESH_H_
 
+#include <vector>
+#include <string>
 #include <iostream>
 #include <fstream>
-#include <string>
-#include <vector>
-
 #include "nullable.h"
-#include "texture.h"
-#include "glcontext.h"
 #include "datatypes.h"
-#include "vertexbuffer.h"
-#include "shader.h"
 #include "geometry.h"
+#include "vertexbuffer.h"
+#include "texture.h"
+#include "shader.h"
+#include "material.h"
+#include "glcontext.h"
 
 using namespace std;
 
@@ -20,7 +20,8 @@ enum VertexFormat
 {
 	VF_XYZ = 1,
 	VF_NORMAL = 2,
-	VF_TEXCOORD = 4
+	VF_TEXCOORD = 4,
+	VF_TANGENTS_BINORMALS = 8
 };
 
 class Mesh
@@ -30,13 +31,13 @@ public:
 
 	bool HasNormals() const { return normals != NULL; }
 	bool HasTexCoords() const { return texCoords != NULL; }
-	int GetVerticesCount() const { return vertices->GetSize() / sizeof(Vector3f); }
-	int GetIndicesCount() const { return indicesCount >= 0 ? indicesCount : indices->GetSize() / sizeof(int); }
-	int GetFaceCount() const { return GetIndicesCount() / 3; }
+	int GetVertexCount() const { return vertices->GetSize() / sizeof(Vector3f); }
+	int GetIndexCount() const { return numIndices >= 0 ? numIndices : indices->GetSize() / sizeof(int); }
+	int GetFaceCount() const { return GetIndexCount() / 3; }
 
 	void SetVertexFormat(int vfFlags);
 	void SetFirstIndex(int firstIndex) { this->firstIndex = firstIndex; }
-	void SetIndicesCount(int indicesCount) { this->indicesCount = indicesCount; } // -1 to draw all
+	void SetIndexCount(int numIndices) { this->numIndices = numIndices; } // -1 to draw all
 
 	void RecalcTangents();
 
@@ -60,8 +61,8 @@ private:
 	GLRenderingContext *rc;
 
 	int firstIndex;
-	int indicesCount;
-	bool tangentsComputed;
+	int numIndices;
+	//int vertexFormat;
 };
 
 #endif // _MESH_H_

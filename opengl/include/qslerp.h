@@ -1,7 +1,7 @@
 #ifndef _QSLERP_H_
 #define _QSLERP_H_
 
-#include "common.h"
+#include <math.h>
 #include "quaternion.h"
 
 class QSlerp

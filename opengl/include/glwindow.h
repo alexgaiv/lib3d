@@ -1,10 +1,10 @@
 #ifndef _GLWINDOW_H_
 #define _GLWINDOW_H_
 
+#include <strsafe.h>
 #include "common.h"
 #include "basewindow.h"
 #include "glcontext.h"
-#include <strsafe.h>
 
 enum MouseButton { NONE, LBUTTON, MBUTTON, RBUTTON };
 
@@ -49,7 +49,8 @@ public:
 		OnDisplay();
 		SwapBuffers(m_hdc);
 	}
-	
+
+	virtual void Update(int timeDelta) { }
 protected:
 	virtual GLRenderingContextParams GetRCParams();
 	virtual void OnCreate() { }
