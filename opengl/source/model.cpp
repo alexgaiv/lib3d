@@ -30,12 +30,15 @@ void Model::ApplyTransform() {
 	rc->MultModelView(transform);
 }
 
-void Model::Draw()
+int Model::Draw()
 {
+	int drawCalls = 0;
 	if (shader) shader->Use();
 	rc->PushModelView();
 	ApplyTransform();
-	for (int i = 0, s = meshes.size(); i < s; i++)
-		meshes[i].Draw();
+	for (int i = 0, s = meshes.size(); i < s; i++) {
+		if (meshes[i].Draw()) drawCalls++;
+	}
 	rc->PopModelView();
+	return drawCalls;
 }

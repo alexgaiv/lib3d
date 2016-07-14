@@ -26,12 +26,15 @@ void GLWindow::CreateFullScreen(LPCTSTR lpCaption)
 
 	this->changeDisplaySettings();
 	this->Create(lpCaption, 0, 0, screenRect.right, screenRect.bottom, WS_POPUP, WS_EX_TOPMOST);
+}
 
+void GLWindow::EnableVsync(bool enabled)
+{
 	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT =
 		(PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
 	if (wglSwapIntervalEXT) {
-		wglSwapIntervalEXT(1);
-		bVsyinc = true;
+		wglSwapIntervalEXT(enabled ? 1 : 0);
+		bVsyinc = enabled;
 	}
 }
 

@@ -11,6 +11,7 @@
 #include "texture.h"
 #include "shader.h"
 #include "material.h"
+#include "frustumculler.h"
 
 using namespace std;
 
@@ -21,7 +22,6 @@ class GLRC_Module
 {
 private:
 	friend class GLRenderingContext;
-	virtual const char *Name() = 0;
 	virtual void Initialize(GLRenderingContext *rc) = 0;
 	virtual void Destroy() = 0;
 };
@@ -76,14 +76,16 @@ public:
 	LibCollection<Texture2D> textures;
 	LibCollection<Material> materials;
 
-	void AddModule(GLRC_Module *module);
+	FrustumCuller frustumCuller;
+
+	void AddModule(const char *name, GLRC_Module *module);
 	GLRC_Module *GetModule(const char *name);
 private:
 	friend class ProgramObject;
 	friend class shared_traits<ProgramObject>;
 
 	HDC _hdc;
-	vector<GLRC_Module *> modules;
+	map<string, GLRC_Module *> modules;
 	list<shared_traits<ProgramObject> *> shaders;
 	Matrix44f modelview, projection;
 	stack<Matrix44f> mvStack, projStack;

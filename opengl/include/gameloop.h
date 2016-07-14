@@ -9,7 +9,9 @@
 class GameLoop
 {
 public:
-	GameLoop(GLWindow &window) : wnd(&window), msPerFrame(16.0)
+	bool sleep1;
+
+	GameLoop(GLWindow &window) : wnd(&window), msPerFrame(16.0), sleep1(false)
 	{ }
 
 	void RestrictFps(bool restrictFps, int maxFps = 0)
@@ -38,13 +40,13 @@ public:
 			int curTime = timeGetTime();
 			int dt = curTime - lastTime;
 
-			if (wnd->IsVsyncEnabled() || dt >= msPerFrame)
+			if (dt >= msPerFrame)
 			{
 				wnd->Update((int)dt);
 				wnd->Redraw();
 				lastTime = curTime;
 			}
-			Sleep(1);
+			if (sleep1) Sleep(1);
 		}
 
 		timeEndPeriod(1);

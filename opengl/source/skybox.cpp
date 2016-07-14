@@ -4,7 +4,6 @@ class GLRC_SkyboxModule : public GLRC_Module
 {
 private:
 	friend class Skybox;
-	const char *Name() { return "Skybox"; }
 	void Initialize(GLRenderingContext *rc);
 	void Destroy();
 
@@ -123,7 +122,7 @@ void Skybox::init()
 	GLRC_SkyboxModule *module = (GLRC_SkyboxModule *)rc->GetModule("Skybox");
 	if (!module) {
 		module = new GLRC_SkyboxModule;
-		rc->AddModule(module);
+		rc->AddModule("Skybox", module);
 	}
 	prog = module->prog;
 	vertices = module->vertices;

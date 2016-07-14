@@ -27,7 +27,7 @@ public:
 	bool LoadRaw(const char *filename);
 	void UpdateTransform();
 	void ApplyTransform();
-	void Draw();
+	int Draw();
 private:
 	GLRenderingContext *rc;
 	Matrix44f transform;

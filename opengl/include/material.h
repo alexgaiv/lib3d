@@ -22,9 +22,9 @@ enum MaterialMode
 class Material
 {
 public:
-	Color3f ambient;
-	Color3f diffuse;
-	Color3f specular;
+	Color4f ambient;
+	Color4f diffuse;
+	Color4f specular;
 	float specularIntensity;
 	Nullable<Texture2D> diffuseMap;
 	Nullable<Texture2D> normalMap;

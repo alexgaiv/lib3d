@@ -70,7 +70,7 @@ void ModelLoader::setupVao(vector<Mesh> &meshes, bool computeTangents)
 
 	if (meshes.size() == 1)
 	{
-		m0.RecalcTangents();
+		m0.ComputeTangents();
 		m0.vao.Bind();
 		m0.vao.EnableVertexAttrib(AttribLocation::Tangent);
 		m0.vao.EnableVertexAttrib(AttribLocation::Binormal);
@@ -108,7 +108,7 @@ void ModelLoader::setupVao(vector<Mesh> &meshes, bool computeTangents)
 			m.binormals = binormals;
 			if (m.material.normalMap) {
 				m.vao = vao_normalMap;
-				m.RecalcTangents();
+				m.ComputeTangents();
 			}
 		}
 	}

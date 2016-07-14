@@ -35,15 +35,15 @@ public:
 	int GetIndexCount() const { return numIndices >= 0 ? numIndices : indices->GetSize() / sizeof(int); }
 	int GetFaceCount() const { return GetIndexCount() / 3; }
 
-	void SetVertexFormat(int vfFlags);
 	void SetFirstIndex(int firstIndex) { this->firstIndex = firstIndex; }
 	void SetIndexCount(int numIndices) { this->numIndices = numIndices; } // -1 to draw all
 
-	void RecalcTangents();
+	void ComputeTangents();
+	void ComputeBoundingBox();
 
-	void Draw();
-	void DrawInstanced(int instanceCount);
-	void DrawFixed();
+	bool Draw();
+	bool DrawInstanced(int instanceCount);
+	bool DrawFixed();
 	bool LoadObj(const char *filename);
 	bool LoadRaw(const char *filename);
 
@@ -62,7 +62,6 @@ private:
 
 	int firstIndex;
 	int numIndices;
-	//int vertexFormat;
 };
 
 #endif // _MESH_H_

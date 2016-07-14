@@ -2,7 +2,7 @@
 #include "glwindow.h"
 
 GLRenderingContext::GLRenderingContext(HDC hdc,
-	const GLRenderingContextParams *params) : hrc(NULL), _hdc(hdc)
+	const GLRenderingContextParams *params) : hrc(NULL), _hdc(hdc), frustumCuller(this)
 {
 	curProgram = NULL;
 	mvpComputed = normComputed = false;
@@ -93,9 +93,10 @@ GLRenderingContext::~GLRenderingContext()
 		wglMakeCurrent(_hdc, NULL);
 		wglDeleteContext(hrc);
 	}
-	for (int i = 0, s = modules.size(); i < s; i++) {
-		modules[i]->Destroy();
-		delete modules[i];
+	map<string, GLRC_Module *>::iterator i;
+	for (i = modules.begin(); i != modules.end(); i++) {
+		i->second->Destroy();
+		delete i->second;
 	}
 }
 
@@ -153,6 +154,7 @@ HGLRC GLRenderingContext::createContextAttrib(HDC hdc, const GLRenderingContextP
 
 void GLRenderingContext::set_mv(const Matrix44f &mat)
 {
+	frustumCuller.UpdateMVP();
 	list<shared_traits<ProgramObject> *>::iterator pi;
 	for (pi = shaders.begin(); pi != shaders.end(); pi++)
 		(*pi)->fUpdateMV = true;
@@ -161,6 +163,7 @@ void GLRenderingContext::set_mv(const Matrix44f &mat)
 
 void GLRenderingContext::set_proj(const Matrix44f &mat)
 {
+	frustumCuller.UpdateMVP();
 	list<shared_traits<ProgramObject> *>::iterator pi;
 	for (pi = shaders.begin(); pi != shaders.end(); pi++)
 		(*pi)->fUpdateProj = true;
@@ -215,15 +218,17 @@ void GLRenderingContext::MultProjection(const Matrix44f &mat)
 	}
 }
 
-void GLRenderingContext::AddModule(GLRC_Module *module)
+void GLRenderingContext::AddModule(const char *name, GLRC_Module *module)
 {
-	if (GetModule(module->Name())) return;
-	modules.push_back(module);
-	module->Initialize(this);
+	map<string, GLRC_Module *>::iterator i = modules.find(name);
+	if (i == modules.end()) {
+		modules[name] = module;
+		module->Initialize(this);
+	}
 }
 GLRC_Module *GLRenderingContext::GetModule(const char *name)
 {
-	for (int i = 0, s = modules.size(); i < s; i++)
-		if (!strcmp(name, modules[i]->Name())) return modules[i];
-	return NULL;
+	map<string, GLRC_Module *>::iterator i = modules.find(name);
+	if (i == modules.end()) return NULL;
+	return i->second;
 }

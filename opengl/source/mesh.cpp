@@ -8,10 +8,9 @@ Mesh::Mesh(GLRenderingContext *rc) : rc(rc)
 {
 	firstIndex = 0;
 	numIndices = -1;
-	//vertexFormat = 0;
 }
 
-void Mesh::RecalcTangents()
+void Mesh::ComputeTangents()
 {
 	if (!normals || !texCoords) return;
 
@@ -71,51 +70,85 @@ void Mesh::RecalcTangents()
 	binormals->Unmap();
 }
 
-void Mesh::Draw()
+void Mesh::ComputeBoundingBox()
 {
-	if (!indices) return;
+	if (!vertices || !indices) return;
+
+	int numIndices = GetIndexCount();
+	Vector3f *verts = (Vector3f *)vertices->Map(GL_READ_ONLY);
+	int *inds = (int *)indices->Map(GL_READ_ONLY);
+
+	Vector3f vmin = verts[inds[firstIndex]];
+	Vector3f vmax = vmin;
+
+	for (int i = firstIndex + 1, n = firstIndex + numIndices; i < n; i++)
+	{
+		Vector3f v = verts[inds[i]];
+
+		if (v.x > vmax.x) vmax.x = v.x;
+		if (v.y > vmax.y) vmax.y = v.y;
+		if (v.z > vmax.z) vmax.z = v.z;
+
+		if (v.x < vmin.x) vmin.x = v.x;
+		if (v.y < vmin.y) vmin.y = v.y;
+		if (v.z < vmin.z) vmin.z = v.z;
+	}
+
+	this->boundingBox.vmin = vmin;
+	this->boundingBox.vmax = vmax;
+
+	vertices->Unmap();
+	indices->Unmap();
+}
+
+bool Mesh::Draw()
+{
+	if (!rc->frustumCuller.Cull(boundingBox)) return false;
+	if (!indices) return false;
 
 	vao.Bind();
-	ProgramObject *p = rc->GetCurProgram();
+	const KnownUniforms &u = rc->GetCurProgram()->GetKnownUniforms();
+
+	glUniform1i(u.mtl_mode, (int)material.mode);
 
 	if (material.diffuseMap) {
-		p->Uniform("Material.useDiffuseMap", 1);
+		glUniform1i(u.mtl_useDiffuseMap, 1);
 		material.diffuseMap->Bind();
 	}
 	if (material.normalMap) {
-		p->Uniform("Material.useNormalMap", 1);
+		glUniform1i(u.mtl_useNormalMap, 1);
 		material.normalMap->Bind();
 	}
 	if (material.opacityMask) {
-		p->Uniform("Material.useOpacityMask", 1);
+		glUniform1i(u.mtl_useOpacityMask, 1);
 		material.opacityMask->Bind();
 	}
-
-	p->Uniform("Material.ambient", 1, material.ambient.data);
-	p->Uniform("Material.diffuse", 1, material.diffuse.data);
-	p->Uniform("Material.mode", (int)material.mode);
+	
+	if (!material.diffuseMap)
+		glUniform4fv(u.mtl_diffuse, 1, material.diffuse.data);
 
 	if (material.mode == MM_BLINN_PHONG)
 	{
-		p->Uniform("Material.specular", 1, material.specular.data);
-		p->Uniform("Material.shininess", material.specularIntensity);
+		glUniform4fv(u.mtl_specular, 1, material.specular.data);
+		glUniform1f(u.mtl_shininess, material.specularIntensity);
 		if (material.specularMap) {
-			p->Uniform("Material.useSpecularMap", 1);
+			glUniform1i(u.mtl_useSpecularMap, 1);
 			material.specularMap->Bind();
 		}
 	}
 
 	indices->DrawElements(GL_TRIANGLES, GetIndexCount(), GL_UNSIGNED_INT, firstIndex * sizeof(int));
 
-	p->Uniform("Material.useDiffuseMap", 0);
-	p->Uniform("Material.useSpecularMap", 0);
-	p->Uniform("Material.useNormalMap", 0);
-	p->Uniform("Material.useOpacityMask", 0);
+	if (material.diffuseMap) glUniform1i(u.mtl_useDiffuseMap, 0);
+	if (material.specularMap) glUniform1i(u.mtl_useSpecularMap, 0);
+	if (material.normalMap) glUniform1i(u.mtl_useNormalMap, 0);
+	if (material.opacityMask) glUniform1i(u.mtl_useOpacityMask, 0);
+	return true;
 }
 
-void Mesh::DrawInstanced(int instanceCount)
+bool Mesh::DrawInstanced(int instanceCount)
 {
-	if (!indices) return;
+	if (!indices) return false;
 
 	vao.Bind();
 	if (material.diffuseMap) material.diffuseMap->Bind();
@@ -124,11 +157,12 @@ void Mesh::DrawInstanced(int instanceCount)
 
 	indices->DrawElementsInstanced(GL_TRIANGLES, GetIndexCount(),
 		GL_UNSIGNED_INT, instanceCount, firstIndex * sizeof(int));
+	return true;
 }
 
-void Mesh::DrawFixed()
+bool Mesh::DrawFixed()
 {
-	if (!indices) return;
+	if (!indices) return false;
 	if (material.diffuseMap) material.diffuseMap->Bind();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -149,54 +183,7 @@ void Mesh::DrawFixed()
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-void Mesh::SetVertexFormat(int vfFlags)
-{
-	//if (vao.GetRefCount() > 1)
-		//vao = VertexArrayObject();
-
-	vao.Bind();
-
-	if (vfFlags & VF_XYZ) {
-		vao.EnableVertexAttrib(AttribLocation::Vertex);
-		if (vertices)
-			vertices->AttribPointer(AttribLocation::Vertex, 3, GL_FLOAT);
-	}
-	else {
-		vao.DisableVertexAttrib(AttribLocation::Vertex);
-	}
-
-	if (vfFlags & VF_NORMAL) {
-		vao.EnableVertexAttrib(AttribLocation::Normal);
-		if (normals)
-			normals->AttribPointer(AttribLocation::Normal, 3, GL_FLOAT);
-	}
-	else {
-		vao.DisableVertexAttrib(AttribLocation::Normal);
-	}
-
-	if (vfFlags & VF_TEXCOORD) {
-		vao.EnableVertexAttrib(AttribLocation::TexCoord);
-		if (texCoords)
-			texCoords->AttribPointer(AttribLocation::TexCoord, 2, GL_FLOAT);
-	}
-	else {
-		vao.DisableVertexAttrib(AttribLocation::TexCoord);
-	}
-
-	if (vfFlags & VF_TANGENTS_BINORMALS) {
-		vao.EnableVertexAttrib(AttribLocation::Tangent);
-		vao.EnableVertexAttrib(AttribLocation::Binormal);
-		if (tangents)
-			tangents->AttribPointer(AttribLocation::Tangent, 3, GL_FLOAT);
-		if (binormals)
-			binormals->AttribPointer(AttribLocation::Binormal, 3, GL_FLOAT);
-	}
-	else {
-		vao.DisableVertexAttrib(AttribLocation::Tangent);
-		vao.DisableVertexAttrib(AttribLocation::Binormal);
-	}
+	return true;
 }
 
 bool Mesh::LoadObj(const char *filename)

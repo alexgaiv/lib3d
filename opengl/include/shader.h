@@ -46,6 +46,23 @@ private:
 	bool log();
 };
 
+struct KnownUniforms
+{
+	int modelView_matrix;
+	int projection_matrix;
+	int mvp_matrix;
+	int normal_matrix;
+	int mtl_ambient;
+	int mtl_diffuse;
+	int mtl_specular;
+	int mtl_shininess;
+	int mtl_useDiffuseMap;
+	int mtl_useSpecularMap;
+	int mtl_useNormalMap;
+	int mtl_useOpacityMask;
+	int mtl_mode;
+};
+
 template<>
 class shared_traits<ProgramObject>
 {
@@ -54,6 +71,7 @@ public:
 	GLuint handle;
 	bool linked;
 	bool fUpdateMV, fUpdateProj;
+	KnownUniforms knownUniforms;
 
 	shared_traits();
 	~shared_traits();
@@ -61,9 +79,7 @@ public:
 	struct Uniforms
 	{
 		int count;
-		char **names;
 		GLenum *types;
-		int mvLoc, projLoc, mvpLoc, normLoc;
 
 		Uniforms();
 		~Uniforms() { free(); }
@@ -88,13 +104,7 @@ public:
 	void BindAttribLocation(GLuint index, const char *name);
 	GLuint GetUniformLocation(const char *name);
 
-	bool HasMvpMatrix() const { return ptr->uniforms.mvpLoc != -1; }
-	bool HasNormalMatrix() const { return ptr->uniforms.normLoc != -1; }
-
-	void ModelView(const Matrix44f &m);
-	void Projection(const Matrix44f &m);
-	void ModelViewProjection(const Matrix44f &m);
-	void NormalMatrix(const Matrix44f &m);
+	const KnownUniforms &GetKnownUniforms() const { return ptr->knownUniforms; }
 
 	void Uniform(const char *name, float v0);
 	void Uniform(const char *name, float v0, float v1);
@@ -116,14 +126,6 @@ private:
 	void updateMatrices();
 	void updateMVP();
 	void updateNorm();
-
-	int lookup(const char *name) {
-		for (int i = 0; i < ptr->uniforms.count; i++) {
-			if (!strcmp(name, ptr->uniforms.names[i]))
-				return i;
-		}
-		return -1;
-	}
 
 	bool is2(GLenum t) {
 		return t == GL_FLOAT_VEC2 || t == GL_INT_VEC2 ||

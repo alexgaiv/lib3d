@@ -45,15 +45,15 @@ bool MaterialLoader::LoadMtl(const char *filename, Dictionary<Material> &materia
 			sscanf_s(line.c_str(), "%f", &current->specularIntensity);
 		}
 		else if (prefix == "Ka") {
-			Color3f &c = current->ambient;
+			Color4f &c = current->ambient;
 			sscanf_s(line.c_str(), "%f %f %f", &c.r, &c.g, &c.b);
 		}
 		else if (prefix == "Kd") {
-			Color3f &c = current->diffuse;
+			Color4f &c = current->diffuse;
 			sscanf_s(line.c_str(), "%f %f %f", &c.r, &c.g, &c.b);
 		}
 		else if (prefix == "Ks") {
-			Color3f &c = current->specular;
+			Color4f &c = current->specular;
 			sscanf_s(line.c_str(), "%f %f %f", &c.r, &c.g, &c.b);
 		}
 		else if (prefix == "map_Kd") {

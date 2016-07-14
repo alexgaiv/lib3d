@@ -532,13 +532,13 @@ Matrix44<T> Matrix44<T>::Identity() {
 	return m;
 }
 
-#ifndef D3D_SDK_VERSION
+//#ifndef D3D_SDK_VERSION
 #define _MMAT1(i, j) \
 	m[i+j] = a[i]*b[j] + a[i+4]*b[j+1] + a[i+8]*b[j+2] + a[i+12]*b[j+3]
-#else
+/*#else
 #define _MMAT1(i, j) \
 	m[i+j] = b[i]*a[j] + b[i+4]*a[j+1] + b[i+8]*a[j+2] + b[i+12]*a[j+3]
-#endif
+#endif*/
 #define _MMAT(i) _MMAT1(i, 0); _MMAT1(i, 4); _MMAT1(i, 8); _MMAT1(i, 12);
 
 template<class T>

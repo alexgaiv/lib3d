@@ -41,6 +41,8 @@ public:
 
 	void CreateFullScreen(LPCTSTR lpCaption);
 
+	void EnableVsync(bool enabled);
+
 	void Show(int nCmdShow) {
 		ShowWindow(m_hwnd, (bFullScreen && nCmdShow == SW_MAXIMIZE) ? SW_SHOW : nCmdShow);
 	}

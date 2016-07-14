@@ -74,17 +74,10 @@ shared_traits<ProgramObject>::~shared_traits()
 shared_traits<ProgramObject>::Uniforms::Uniforms()
 {
 	count = 0;
-	names = NULL;
 	types = NULL;
-	mvLoc = projLoc = mvpLoc = normLoc = 0;
 }
 
 void shared_traits<ProgramObject>::Uniforms::free() {
-	if (count == 0) return;
-	for (int i = 0; i < count; i++) {
-		delete [] names[i];
-	}
-	delete [] names;
 	delete [] types;
 }
 
@@ -119,37 +112,38 @@ void ProgramObject::DetachShader(const Shader &shader) {
 
 void ProgramObject::updateMVP()
 {
-	if (HasMvpMatrix()) {
+	if (ptr->knownUniforms.mvp_matrix != -1) {
 		if (!rc->mvpComputed) {
 			rc->mvpMatrix = rc->projection * rc->modelview;
 			rc->mvpComputed = true;
 		}
-		glUniformMatrix4fv(ptr->uniforms.mvpLoc, 1, GL_FALSE, rc->mvpMatrix.data);
+		glUniformMatrix4fv(ptr->knownUniforms.mvp_matrix, 1, GL_FALSE, rc->mvpMatrix.data);
 	}
 }
 
 void ProgramObject::updateNorm()
 {
-	if (HasNormalMatrix()) {
+	if (ptr->knownUniforms.normal_matrix != -1) {
 		if (!rc->normComputed) {
 			rc->normalMatrix = rc->modelview.GetInverse().GetTranspose();
 			rc->normComputed = true;
 		}
-		glUniformMatrix4fv(ptr->uniforms.normLoc, 1, GL_FALSE, rc->normalMatrix.data);
+		glUniformMatrix4fv(ptr->knownUniforms.normal_matrix, 1, GL_FALSE, rc->normalMatrix.data);
 	}
 }
 
 void ProgramObject::updateMatrices()
 {
-	if (ptr->fUpdateMV) {
-		glUniformMatrix4fv(ptr->uniforms.mvLoc, 1, GL_FALSE, rc->modelview.data);
+	if (ptr->fUpdateMV || ptr->fUpdateProj)
 		updateMVP();
+
+	if (ptr->fUpdateMV) {
+		glUniformMatrix4fv(ptr->knownUniforms.modelView_matrix, 1, GL_FALSE, rc->modelview.data);
 		updateNorm();
 		ptr->fUpdateMV = false;
 	}
 	if (ptr->fUpdateProj) {
-		glUniformMatrix4fv(ptr->uniforms.projLoc, 1, GL_FALSE, rc->projection.data);
-		updateMVP();
+		glUniformMatrix4fv(ptr->knownUniforms.projection_matrix, 1, GL_FALSE, rc->projection.data);
 		ptr->fUpdateProj = false;
 	}
 }
@@ -189,24 +183,35 @@ bool ProgramObject::Link()
 	if (ptr->linked)
 	{
 		shared_traits<ProgramObject>::Uniforms &uniforms = ptr->uniforms;
+		KnownUniforms &knownUniforms = ptr->knownUniforms;
+
 		uniforms.free();
 		glGetProgramiv(ptr->handle, GL_ACTIVE_UNIFORMS, &uniforms.count);
 		if (uniforms.count != 0) {
 			int maxLen = 0;
 			glGetProgramiv(ptr->handle, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLen);
 
-			uniforms.names = new char *[uniforms.count];
 			uniforms.types = new GLenum[uniforms.count];
 
 			GLint size = 0;
+			char buf[1];
 			for (int i = 0; i < uniforms.count; i++) {
-				uniforms.names[i] = new char[maxLen];
-				glGetActiveUniform(ptr->handle, i, maxLen, NULL, &size, &uniforms.types[i], uniforms.names[i]);
+				glGetActiveUniform(ptr->handle, i, 1, NULL, &size, &uniforms.types[i], buf);
 			}
-			uniforms.mvLoc = GetUniformLocation("ModelView");
-			uniforms.projLoc = GetUniformLocation("Projection");
-			uniforms.normLoc = GetUniformLocation("NormalMatrix");
-			uniforms.mvpLoc = GetUniformLocation("ModelViewProjection");
+
+			knownUniforms.modelView_matrix = GetUniformLocation("ModelView");
+			knownUniforms.projection_matrix = GetUniformLocation("Projection");
+			knownUniforms.normal_matrix = GetUniformLocation("NormalMatrix");
+			knownUniforms.mvp_matrix = GetUniformLocation("ModelViewProjection");
+			knownUniforms.mtl_ambient = GetUniformLocation("Material.ambient");
+			knownUniforms.mtl_diffuse = GetUniformLocation("Material.diffuse");
+			knownUniforms.mtl_specular = GetUniformLocation("Material.specular");
+			knownUniforms.mtl_shininess = GetUniformLocation("Material.shininess");
+			knownUniforms.mtl_useDiffuseMap = GetUniformLocation("Material.useDiffuseMap");
+			knownUniforms.mtl_useSpecularMap = GetUniformLocation("Material.useSpecularMap");
+			knownUniforms.mtl_useNormalMap = GetUniformLocation("Material.useNormalMap");
+			knownUniforms.mtl_useOpacityMask = GetUniformLocation("Material.useOpacityMask");
+			knownUniforms.mtl_mode = GetUniformLocation("Material.mode");
 		}
 	}
 
@@ -225,68 +230,40 @@ GLuint ProgramObject::GetUniformLocation(const char *name) {
 	return glGetUniformLocation(ptr->handle, name);
 }
 
-void ProgramObject::ModelView(const Matrix44f &m) {
-	if (ptr->uniforms.mvLoc != -1) {
-		Use();
-		glUniformMatrix4fv(ptr->uniforms.mvLoc, 1, GL_FALSE, m.data);
-	}
-}
-
-void ProgramObject::Projection(const Matrix44f &m) {
-	if (ptr->uniforms.projLoc != -1) {
-		Use();
-		glUniformMatrix4fv(ptr->uniforms.projLoc, 1, GL_FALSE, m.data);
-	}
-}
-
-void ProgramObject::ModelViewProjection(const Matrix44f &m) {
-	if (ptr->uniforms.mvpLoc != -1) {
-		Use();
-		glUniformMatrix4fv(ptr->uniforms.mvpLoc, 1, GL_FALSE, m.data);
-	}
-}
-
-void ProgramObject::NormalMatrix(const Matrix44f &m) {
-	if (ptr->uniforms.normLoc != -1) {
-		Use();
-		glUniformMatrix4fv(ptr->uniforms.normLoc, 1, GL_FALSE, m.data);
-	}
-}
-
 void ProgramObject::Uniform(const char *name, float v0) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform1f(i, v0); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform2f(i, v0, v1); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1, float v2) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform3f(i, v0, v1, v2); }
 }
 void ProgramObject::Uniform(const char *name, float v0, float v1, float v2, float v3) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform4f(i, v0, v1, v2, v3); }
 }
 void ProgramObject::Uniform(const char *name, int v0) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform1i(i, v0); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform2i(i, v0, v1); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1, int v2) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform3i(i, v0, v1, v2); }
 }
 void ProgramObject::Uniform(const char *name, int v0, int v1, int v2, int v3) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) { Use(); glUniform4i(i, v0, v1, v2, v3); }
 }
 void ProgramObject::Uniform(const char *name, int count, const float *value) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) {
 		Use();
 		GLenum t = ptr->uniforms.types[i];
@@ -297,7 +274,7 @@ void ProgramObject::Uniform(const char *name, int count, const float *value) {
 	}
 }
 void ProgramObject::Uniform(const char *name, int count, const int *value) {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) {
 		Use();
 		GLenum t = ptr->uniforms.types[i];
@@ -310,7 +287,7 @@ void ProgramObject::Uniform(const char *name, int count, const int *value) {
 
 void ProgramObject::UniformMatrix(const char *name, int count, bool transpose, const float *v)
 {
-	int i = lookup(name);
+	int i = glGetUniformLocation(ptr->handle, name);
 	if (i != -1) {
 		Use();
 		GLenum t = ptr->uniforms.types[i];

@@ -136,7 +136,6 @@ class GLRC_Text2DModule : public GLRC_Module
 {
 private:
 	friend class Text2D;
-	const char *Name() { return "Text2D"; }
 	void Initialize(GLRenderingContext *rc);
 	void Destroy();
 
@@ -194,7 +193,7 @@ Text2D::Text2D(GLRenderingContext *rc, const Font2D &font) :
 	GLRC_Text2DModule *module = (GLRC_Text2DModule *)rc->GetModule("Text2D");
 	if (!module) {
 		module = new GLRC_Text2DModule;
-		rc->AddModule(module);
+		rc->AddModule("Text2D", module);
 	}
 	prog = module->prog;
 
