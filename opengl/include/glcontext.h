@@ -73,10 +73,12 @@ public:
 	void PushProjection() { projStack.push(projection); }
 	void PopProjection()  { SetProjection(projStack.top()); projStack.pop(); }
 
+	void EnableFrustumCulling(bool enabled) { fFrustumCulling = enabled; }
+	bool IsFrustumCullingEnabled() const { return fFrustumCulling; }
+	FrustumCuller frustumCuller;
+
 	LibCollection<Texture2D> textures;
 	LibCollection<Material> materials;
-
-	FrustumCuller frustumCuller;
 
 	void AddModule(const char *name, GLRC_Module *module);
 	GLRC_Module *GetModule(const char *name);
@@ -89,6 +91,7 @@ private:
 	list<shared_traits<ProgramObject> *> shaders;
 	Matrix44f modelview, projection;
 	stack<Matrix44f> mvStack, projStack;
+	bool fFrustumCulling;
 
 	ProgramObject *curProgram;
 

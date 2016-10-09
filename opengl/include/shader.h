@@ -9,6 +9,8 @@
 #include "datatypes.h"
 #include "vertexbuffer.h"
 
+using namespace std;
+
 class GLRenderingContext;
 class Shader;
 class ProgramObject;
@@ -36,14 +38,15 @@ class Shader : public Shared<Shader>
 {
 public:
 	Shader(GLenum type);
-	Shader(GLenum type, const char *path);
+	Shader(GLenum type, const char *path, const vector<string> &definitions = vector<string>());
 
 	GLuint Handle() const { return ptr->handle; }
 	bool IsCompiled() const { return ptr->compiled; }
-	bool CompileFile(const char *filename);
-	bool CompileSource(const char *source, int length = 0);
+	bool CompileFile(const char *filename, const vector<string> &definitions = vector<string>());
+	bool CompileSource(const char *source, int length = 0, const vector<string> &definitions = vector<string>());
 private:
 	bool log();
+	void compileLines(const vector<string> &lines);
 };
 
 struct KnownUniforms
