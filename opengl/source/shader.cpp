@@ -1,28 +1,105 @@
 #include "shader.h"
+#include "stringhelp.h"
 #include "glcontext.h"
-#include <strsafe.h>
+#include <vector>
+#include <string>
+#include <stack>
+
+using namespace std;
+
+class ShaderPreprocessor
+{
+	const vector<string> &definitions;
+	vector<string> lines;
+	stack<bool> st;
+public:
+	ShaderPreprocessor(const vector<string> &definitions)
+		: definitions(definitions)
+	{
+		st.push(true);
+	}
+
+	vector<string> &GetLines() { return lines; }
+	const vector<string> &GetLines() const { return lines; }
+
+	void CheckErrors() {
+		if (st.size() != 1)
+			throw false;
+	}
+
+	void ProcessLine(const string &line)
+	{
+		if (line[0] != '#') {
+			if (st.top()) lines.push_back(line + "\n");
+			else lines.push_back("\n");
+		}
+		else
+		{
+			string directive, definition;
+			int i = line.find_first_of(" \t");
+			if (i != -1)
+			{
+				directive = line.substr(1, i - 1);
+				definition = strhlp::trim(line.substr(i + 1));
+			}
+			else directive = strhlp::trimRight(line.substr(1));
+
+			if (directive == "ifdef" || directive == "ifndef")
+			{
+				if (st.top())
+				{
+					if (isdigit(definition[0])) throw false;
+					for (int j = 0, n = definition.size(); j < n; j++) {
+						char c = definition[j];
+						if (!isalnum(c) && c != '_') throw false;
+					}
+
+					int k = -1;
+					for (int i = 0, n = definitions.size(); i < n; i++) {
+						if (definitions[i] == definition) {
+							k = i;
+							break;
+						}
+					}
+					bool value = directive == "ifdef" ? (k != -1) : (k == -1);
+					st.push(value);
+				}
+				lines.push_back("\n");
+			}
+			else if (directive == "else")
+			{
+				if (st.size() < 2) throw false;
+				bool value = st.top();
+				st.pop();
+				st.push(!value);
+				lines.push_back("\n");
+			}
+			else if (directive == "endif")
+			{
+				if (st.size() < 2) throw false;
+				st.pop();
+				lines.push_back("\n");
+			}
+			else {
+				lines.push_back(line + "\n");
+			}
+		}
+	}
+};
 
 Shader::Shader(GLenum type) {
 	ptr->handle = glCreateShader(type);
 }
 
-Shader::Shader(GLenum type, const char *path) {
+Shader::Shader(GLenum type, const char *path, const vector<string> &definitions) {
 	ptr->handle = glCreateShader(type);
-	ptr->compiled = CompileFile(path);
+	ptr->compiled = CompileFile(path, definitions);
 }
 
-bool Shader::CompileFile(const char *filename)
+void Shader::compileLines(const vector<string> &lines)
 {
-	std::ifstream hFile(filename);
-	if (!hFile) return false;
-
-	std::vector<std::string> lines;
-	std::string line;
-	while(std::getline(hFile, line))
-		lines.push_back(line + "\n");
-	hFile.close();
-
 	int numLines = lines.size();
+
 	const char **source = new const char*[numLines];
 	for (int i = 0; i < numLines; i++) {
 		source[i] = lines[i].c_str();
@@ -30,14 +107,54 @@ bool Shader::CompileFile(const char *filename)
 
 	glShaderSource(ptr->handle, numLines, (const GLchar **)source, NULL);
 	glCompileShader(ptr->handle);
-	delete [] source;
+	delete[] source;
+}
+
+bool Shader::CompileFile(const char *filename, const vector<string> &definitions)
+{
+	ifstream file(filename);
+	if (!file) return false;
+
+	string line;
+	ShaderPreprocessor sp(definitions);
+
+	try {
+		while (getline(file, line))
+			sp.ProcessLine(line);
+		sp.CheckErrors();
+	}
+	catch (bool)
+	{
+		file.close();
+		OutputDebugStringA("ERROR: #if[n]def parse error\n");
+		return false;
+	}
+
+	file.close();
+
+	compileLines(sp.GetLines());
 	return log();
 }
 
-bool Shader::CompileSource(const char *source, int length)
+bool Shader::CompileSource(const char *source, int length, const vector<string> &definitions)
 {
-	glShaderSource(ptr->handle, 1, &source, length ? &length : NULL);
-	glCompileShader(ptr->handle);
+	string s = length ? string(source, length) : string(source);
+	vector<string> lines = strhlp::split(s, '\n');
+
+	ShaderPreprocessor sp(definitions);
+
+	try {
+		for (int i = 0, n = lines.size(); i < n; i++)
+			sp.ProcessLine(lines[i]);
+		sp.CheckErrors();
+	}
+	catch (bool)
+	{
+		OutputDebugStringA("ERROR: #if[n]def parse error\n");
+		return false;
+	}
+
+	compileLines(sp.GetLines());
 	return log();
 }
 

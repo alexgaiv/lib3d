@@ -27,7 +27,7 @@ void GLRC_SkyboxModule::Initialize(GLRenderingContext *rc)
 	prog->AttachShader(vshader);
 	prog->AttachShader(fshader);
 	prog->Link();
-	prog->Uniform("cubeTex", 0);
+	prog->Uniform("EnvMap", 0);
 }
 
 void GLRC_SkyboxModule::Destroy()
@@ -99,9 +99,9 @@ char *GLRC_SkyboxModule::shaderSource[2] =
 	,
 	"#version 130\n"
 	"in vec3 fTexCoord;"
-	"uniform samplerCube cubeTex;"
+	"uniform samplerCube EnvMap;"
 	"void main() {"
-		"gl_FragColor = texture(cubeTex, fTexCoord);"
+		"gl_FragColor = texture(EnvMap, fTexCoord);"
 	"}"
 };
 

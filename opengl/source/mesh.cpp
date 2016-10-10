@@ -103,7 +103,8 @@ void Mesh::ComputeBoundingBox()
 
 bool Mesh::Draw()
 {
-	if (!rc->frustumCuller.Cull(boundingBox)) return false;
+	if (rc->IsFrustumCullingEnabled() && !rc->frustumCuller.Cull(boundingBox))
+		return false;
 	if (!indices) return false;
 
 	vao.Bind();

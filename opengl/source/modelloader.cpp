@@ -1,4 +1,5 @@
 #include "modelloader.h"
+#include "stringhelp.h"
 #include "material.h"
 #include <fstream>
 
@@ -140,9 +141,7 @@ bool ModelLoader::loadObj(const char *filename, vector<Mesh> &meshes, bool separ
 	string line;
 	while (getline(file, line))
 	{
-		int k = 0;
-		while (isspace(line[k])) k++;
-		if (k != 0) line.erase(0, k);
+		line = strhlp::trimLeft(line);
 
 		int i = line.find(' ');
 		if (i == -1) continue;

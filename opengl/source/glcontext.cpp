@@ -6,6 +6,7 @@ GLRenderingContext::GLRenderingContext(HDC hdc,
 {
 	curProgram = NULL;
 	mvpComputed = normComputed = false;
+	fFrustumCulling = true;
 
 	PIXELFORMATDESCRIPTOR pfd = { };
 	if (!params->pixelFormat)

@@ -1,6 +1,6 @@
 #include "material.h"
+#include "stringhelp.h"
 #include "glcontext.h"
-#include <utility>
 
 Texture2D MaterialLoader::getTexture(const string &name, Dictionary<Texture2D> &textures)
 {
@@ -29,9 +29,7 @@ bool MaterialLoader::LoadMtl(const char *filename, Dictionary<Material> &materia
 	string line;
 	while (getline(file, line))
 	{
-		int k = 0;
-		while (isspace(line[k])) k++;
-		if (k != 0) line.erase(0, k);
+		line = strhlp::trimLeft(line);
 
 		int i = line.find(' ');
 		if (i == -1) continue;
