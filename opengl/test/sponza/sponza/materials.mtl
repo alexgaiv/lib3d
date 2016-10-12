@@ -1,0 +1,16 @@
+newmtl gun
+Kd 0.5 0.5 0.5
+Ks 1 1 1
+Ns 100
+map_Kd textures/gun/diffuse.tga
+map_Ks textures/gun/specular.tga
+map_bump textures/gun/normal.tga
+illum 2
+
+newmtl muzzle
+map_Kd textures/muzzle.tga
+illum 0
+
+newmtl crosshair
+map_Kd textures/crosshair.tga
+illum 0
