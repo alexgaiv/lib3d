@@ -1,5 +1,5 @@
-#ifndef _VIEWER3D_
-#define _VIEWER3D_
+#ifndef _TRACKBALL_H_
+#define _TRACKBALL_H_
 
 #include "datatypes.h"
 #include "quaternion.h"
@@ -48,4 +48,4 @@ private:
 	void calcMatr();
 };
 
-#endif // _VIEWER3D_
+#endif // _TRACKBALL_H_
